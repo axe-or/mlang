@@ -1,0 +1,66 @@
+#include <stdbool.h>
+#define DYN_ARRAY_MIN_CAP 16
+
+typedef struct {
+    #(PointerT) v;
+    size_t len;
+    size_t cap;
+} #(ArrayType);
+
+static inline
+void #(Prefix)_init(#(ArrayType)* arr, size_t len, size_t cap){
+    arr->len = len;
+    arr->cap = cap;
+    arr->v = (#(PointerT))calloc(len, sizeof(#(T)));
+}
+
+static inline
+void #(Prefix)_resize(#(ArrayType)* arr, size_t new_cap){
+    bool requires_zeroing_excess = new_cap > arr->cap;
+
+    arr->len = new_cap < arr->len ? new_cap : arr->len;
+    arr->cap = new_cap;
+    arr->v   = (#(PointerT))realloc(arr->v, sizeof(#(T)) * new_cap);
+
+    if(requires_zeroing_excess){
+        memset(&arr->v[arr->len], 0, sizeof(#(T)) * (arr->cap - arr->len));
+    }
+}
+
+static inline
+void #(Prefix)_clear(#(ArrayType)* arr){
+    arr->len = 0;
+}
+
+static inline
+void #(Prefix)_append(#(ArrayType)* arr, #(T) value){
+    if(arr->len >= arr->cap){
+        size_t new_cap = arr->cap * 2;
+        if(new_cap < DYN_ARRAY_MIN_CAP) new_cap = DYN_ARRAY_MIN_CAP;
+        #(Prefix)_resize(arr, new_cap);
+    }
+
+    arr->v[arr->len] = value;
+    arr->len += 1;
+}
+
+static inline
+bool #(Prefix)_pop(#(ArrayType)* arr){
+    if(arr->len == 0){
+        return false;
+    }
+
+    arr->len -= 1;
+    return true;
+}
+
+static inline
+bool #(Prefix)_pop_into(#(ArrayType)* arr, #(PointerT) out){
+    if(arr->len == 0){
+        return false;
+    }
+
+    arr->len -= 1;
+    *out = arr->v[arr->len];
+    return true;
+}

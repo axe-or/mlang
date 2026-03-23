@@ -1,0 +1,3 @@
+#define len(S)     ((S).len)
+#define skip(S, N) ((typeof(S)){.v = (S).v + (N), .len = (S).len - (N) })
+#define take(S, N) ((typeof(S)){.v = (S).v,       .len = (N) })
