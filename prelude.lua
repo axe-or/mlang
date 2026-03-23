@@ -66,11 +66,16 @@ end
 
 function exec_template(s, vars, max_depth)
     max_depth = max_depth or 1
-    for i = 1, max_depth, 1 do
-        s = s:gsub("#%(([%w_]+)%)", vars)
+    local prev = ''
+    for _ = 1, max_depth, 1 do
+        s = s:gsub("%$%(([%w_]+)%)", vars):gsub("%$([%w_]+)", vars)
+        if prev == s then
+            break
+        end
+        prev = s
     end
 
-    return  s
+    return s
 end
 
 function file_read(path)
@@ -93,4 +98,16 @@ function file_write(path, data, with_header)
 
     f:write(data)
     f:close()
+end
+
+function pascal_to_snake(s)
+  s = s:gsub("(%l)(%u)", "%1_%2")     -- xY  -> x_Y
+  s = s:gsub("(%u+)(%u%l)", "%1_%2")  -- HTTPServer -> HTTP_Server
+  return s:lower()
+end
+
+function snake_to_pascal(s)
+  return (s:gsub("(%a)([%a%d]*)", function(first, rest)
+    return first:upper() .. rest
+  end):gsub("_", ""))
 end
