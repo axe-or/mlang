@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include "dynamic_array.h"
 
-
 void int_array_print(IntArray arr){
     printf("[%zu/%zu ", arr.len, arr.cap);
     for(int i = 0; i < arr.len; i++){
