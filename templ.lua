@@ -46,8 +46,9 @@ function Header:__tostring()
     return self:render()
 end
 
-function h1(x)
-        return Header:new(x)
-end
+function h1(x) return Header:new(x, 1) end
+function h2(x) return Header:new(x, 2) end
+function h3(x) return Header:new(x, 3) end
+function h4(x) return Header:new(x, 4) end
 
-print(h1(h1(h1 'X')))
+print(h1(h3(h1 'X')))
