@@ -38,3 +38,13 @@ extern int printf(char const*, ...);
     printf("%s:%d Assertion failed: %s", __FILE__, __LINE__, msg); \
     abort(); \
 } } while(0)
+
+// #define skip(S, N) ((typeof(S)){.v = (S).v + (N), .len = (S).len - (N) })
+// #define take(S, N) ((typeof(S)){.v = (S).v,       .len = (N) })
+
+typedef struct{
+    char const* v;
+    usize len;
+} String;
+
+#define $str(L) (String){.v = "" L "", .len = sizeof(L) - 1}

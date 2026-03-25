@@ -18,5 +18,4 @@ int main(){
         int_array_print(arr);
     }
 
-    return 0;
 }
