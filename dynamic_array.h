@@ -1,4 +1,4 @@
-// File automatically generated at 2026-03-24 22:45:14. DO NOT EDIT.
+// File automatically generated at 2026-03-26 22:08:55. DO NOT EDIT.
 
 #include "base.h"
 #define DYN_ARRAY_MIN_CAP 16
@@ -232,83 +232,5 @@ void string_array_insert(StringArray* arr, size_t idx, String val){
     }
 
     memmove(&arr->v[idx + 1], &arr->v[idx], sizeof(String) * (arr->len - 0));
-    arr->v[idx] = val;
-}
-#include "base.h"
-#define DYN_ARRAY_MIN_CAP 16
-
-typedef struct {
-    StringArray* v;
-    size_t len;
-    size_t cap;
-} StringArrayArray;
-
-static inline
-void string_array_array_init(StringArrayArray* arr, size_t len, size_t cap){
-    arr->len = len;
-    arr->cap = cap;
-    arr->v = (StringArray*)calloc(cap, sizeof(StringArray));
-}
-
-static inline
-void string_array_array_resize(StringArrayArray* arr, size_t new_cap){
-    bool requires_zeroing_excess = new_cap > arr->cap;
-
-    arr->v = (StringArray*)realloc(arr->v, sizeof(StringArray) * new_cap);
-    ensure(arr->v, "failed to reallocate");
-
-    arr->len = min(arr->len, new_cap);
-    arr->cap = new_cap;
-
-    if(requires_zeroing_excess){
-        memset(&arr->v[arr->len], 0, sizeof(StringArray) * (arr->cap - arr->len));
-    }
-}
-
-static inline
-void string_array_array_clear(StringArrayArray* arr){
-    arr->len = 0;
-}
-
-static inline
-void string_array_array_append(StringArrayArray* arr, StringArray value){
-    if(arr->len >= arr->cap){
-        size_t new_cap = max(arr->cap * 2, DYN_ARRAY_MIN_CAP);
-        string_array_array_resize(arr, new_cap);
-    }
-
-    arr->v[arr->len] = value;
-    arr->len += 1;
-}
-
-static inline
-bool string_array_array_pop(StringArrayArray* arr){
-    if(arr->len == 0){
-        return false;
-    }
-
-    arr->len -= 1;
-    return true;
-}
-
-static inline
-bool string_array_array_pop_into(StringArrayArray* arr, StringArray* out){
-    if(arr->len == 0){
-        return false;
-    }
-
-    arr->len -= 1;
-    *out = arr->v[arr->len];
-    return true;
-}
-
-static inline
-void string_array_array_insert(StringArrayArray* arr, size_t idx, StringArray val){
-    if(arr->len >= arr->cap){
-        size_t new_cap = max(arr->cap * 2, DYN_ARRAY_MIN_CAP);
-        string_array_array_resize(arr, new_cap);
-    }
-
-    memmove(&arr->v[idx + 1], &arr->v[idx], sizeof(StringArray) * (arr->len - 0));
     arr->v[idx] = val;
 }
