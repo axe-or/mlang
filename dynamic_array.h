@@ -1,6 +1,11 @@
-// File automatically generated at 2026-03-26 22:08:55. DO NOT EDIT.
+// File automatically generated at 2026-03-27 22:49:28. DO NOT EDIT.
 
 #include "base.h"
+
+extern void* calloc(size_t, size_t);
+extern void* realloc(void*, size_t);
+extern void free(void*);
+
 #define DYN_ARRAY_MIN_CAP 16
 
 typedef struct {
@@ -79,6 +84,11 @@ void int_array_insert(IntArray* arr, size_t idx, int val){
     arr->v[idx] = val;
 }
 #include "base.h"
+
+extern void* calloc(size_t, size_t);
+extern void* realloc(void*, size_t);
+extern void free(void*);
+
 #define DYN_ARRAY_MIN_CAP 16
 
 typedef struct {
@@ -157,6 +167,11 @@ void u8array_insert(U8Array* arr, size_t idx, u8 val){
     arr->v[idx] = val;
 }
 #include "base.h"
+
+extern void* calloc(size_t, size_t);
+extern void* realloc(void*, size_t);
+extern void free(void*);
+
 #define DYN_ARRAY_MIN_CAP 16
 
 typedef struct {

@@ -1,4 +1,9 @@
 #include "base.h"
+
+extern void* calloc(size_t, size_t);
+extern void* realloc(void*, size_t);
+extern void free(void*);
+
 #define DYN_ARRAY_MIN_CAP 16
 
 typedef struct {
