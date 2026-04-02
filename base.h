@@ -263,7 +263,6 @@ void virtual_init();
 usize virtual_page_size();
 
 //// Allocator
-
 typedef enum {
 	Mem_Query   = 0,
 	Mem_Alloc   = 1 << 0,
@@ -272,12 +271,12 @@ typedef enum {
 	Mem_FreeAll = 1 << 3,
 } AllocatorMode;
 
-union AllocatorResult {
+typedef union {
 	void* ptr;
 	u8    modes;
-};
+} AllocatorResult;
 
-typedef union AllocatorResult (*AllocatorFunc)(
+typedef AllocatorResult (*AllocatorFunc)(
 	void* impl, u8 mode,
 	void* ptr,
 	usize old_size, usize old_align, /* Old layout */
@@ -314,6 +313,11 @@ u8 mem_query(Allocator a){
 	return a.fn(a.impl, Mem_FreeAll, NULL, 0, 0, 0, 0).modes;
 }
 
+#define mem_make(alloc, type, count) \
+    ((type *)mem_alloc((alloc), (count) * sizeof(type), alignof(type)))
+
+#define mem_destroy(alloc, ptr, count) \
+    (mem_free((alloc), (ptr), (count) * sizeof(ptr[0]), alignof(typeof(ptr[0]))))
 
 //// Arena
 enum ArenaType {
@@ -356,58 +360,70 @@ void* arena_alloc(Arena* a, usize size, usize align);
 // Reset an arena
 void arena_reset(Arena* a);
 
+// Transform arena into allocator
+Allocator arena_allocator(Arena* arena);
+
 // Create a static arena that owns a preallocated buffer
 Arena arena_from_buffer(u8* buf, usize bufsize);
 
 // Create a virtual arena that commits pages as required
 Arena arena_from_virtual(usize reserve_size, u32 commit_size, u32 initial_commit_size);
 
-// DEPRECATED
-Arena* arena_make_sub(Arena* a, usize size);
-
+// Print using vprintf directly to arena and return result
 String arena_vprintf(Arena* arena, char const* fmt, va_list args);
 
+// Print using printf directly to arena and return result
 String arena_printf(Arena* arena, char const* fmt, ...);
 
 #define arena_make(arena, type, count) (type *)arena_alloc((arena), sizeof(type) * (count), alignof(type))
 
-//// Slice (raw)
-typedef struct {
-	void* data;
-	usize len;
-} RawSlice;
+// //// Slice (raw)
+// typedef struct {
+// 	void* data;
+// 	usize len;
+// } RawSlice;
 
-static inline
-RawSlice raw_slice_take(RawSlice s, usize count, usize elem_size, cstring file, int line){
-	ensure_ex(count <= s.len, "cannot take more than slice length", file, line);
-	return (RawSlice){
-		.data = s.data,
-		.len = count,
-	};
-}
+// static inline
+// RawSlice raw_slice_take(RawSlice s, usize count, usize elem_size, cstring file, int line){
+// 	ensure_ex(count <= s.len, "cannot take more than slice length", file, line);
+// 	return (RawSlice){
+// 		.data = s.data,
+// 		.len = count,
+// 	};
+// }
 
-static inline
-RawSlice raw_slice_skip(RawSlice s, usize count, usize elem_size, cstring file, int line){
-	TODO();
-}
+// static inline
+// RawSlice raw_slice_skip(RawSlice s, usize count, usize elem_size, cstring file, int line){
+// 	ensure_ex(count < s.len, "cannot skip more than slice length", file, line);
+// 	return (RawSlice){
+// 		.data = (void*)((uintptr)s.data + (count * elem_size)),
+// 		.len = s.len - count,
+// 	};
+// }
 
-//// Slice (typed)
-#define Slice(T) union { RawSlice slice; T* _tag; }
+// //// Slice (typed)
+// #define Slice(T) union { RawSlice slice; T* _tag; }
 
-#define slice_take(S, N) (typeof(S)){ .slice = raw_slice_take((S).slice, (N), sizeof(*(S)._tag), __FILE__, __LINE__), ._tag = (S)._tag }
+// #define slice_take(S, N) (typeof(S)){ .slice = raw_slice_take((S).slice, (N), sizeof(*(S)._tag), __FILE__, __LINE__), ._tag = (S)._tag }
 
-#if 0
+// #define slice_skip(S, N) (typeof(S)){ .slice = raw_slice_skip((S).slice, (N), sizeof(*(S)._tag), __FILE__, __LINE__), ._tag = (S)._tag }
+
 //// Array (raw)
 typedef struct {
 	void*  data;
 	usize  len;
 	usize  cap;
-	Arena* arena;
+	Allocator allocator;
 } RawArray;
 
 static inline
 bool raw_array_resize(RawArray* arr, usize new_cap, usize elem_size, usize elem_align) {
-	void* new_data = arena_realloc(arr->arena, arr->data, elem_size * new_cap, elem_size * new_cap, elem_align);
+	void* new_data = mem_realloc(arr->allocator,
+	    arr->data,
+		elem_size * new_cap, elem_align,
+		elem_size * new_cap, elem_align
+	);
+
 	if(!new_data){
 		return false;
 	}
@@ -475,18 +491,24 @@ bool raw_array_insert(RawArray* arr, usize idx, void const * elem, usize elem_si
 }
 
 static inline
-RawArray raw_array_make(Arena* arena){
+RawArray raw_array_make(Allocator a){
 	RawArray array = {
 		.data = NULL,
 		.len = 0,
 		.cap = 0,
-		.arena = arena,
+		.allocator = a,
 	};
 	return array;
 }
 
-//// Array (typed)
+static inline
+void raw_array_destroy(RawArray* arr, usize size, usize align){
+    if(!arr) return;
+    mem_free(arr->allocator, arr->data, size, align);
+    arr->cap = 0;
+}
 
+//// Array (typed)
 #define Array(T) union { RawArray array; T* _tag; }
 
 #define array_len(arr) ((arr).array.len)
@@ -531,10 +553,8 @@ RawArray raw_array_make(Arena* arena){
 		"failed to push array", __FILE__, __LINE__ \
 	); \
 } while(0)
-#endif
 
 //// Spinlock
-
 typedef struct {
 	AtomicBool _state;
 } Spinlock;
@@ -546,7 +566,6 @@ void spin_unlock(Spinlock* l);
 bool spin_try_lock(Spinlock* l);
 
 //// Threads
-
 typedef struct Thread Thread;
 
 enum ThreadFlags {
@@ -589,4 +608,3 @@ void thread_destroy(Thread* t);
 bool thread_is_done(Thread* t);
 
 void thread_yield();
-

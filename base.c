@@ -164,20 +164,6 @@ bool arena_resize(Arena* a, void* ptr, usize new_size){
 	return false;
 }
 
-Arena* arena_make_sub(Arena* a, usize size){
-	usize restore = a->offset;
-	Arena* new_arena = (Arena*)arena_alloc(a, sizeof(Arena), alignof(Arena));
-	u8* new_storage = (u8*)arena_alloc(a, size, alignof(void*));
-
-	if(new_arena == NULL || new_storage == NULL){
-		a->offset = restore;
-		return NULL;
-	}
-
-	*new_arena = arena_from_buffer(new_storage, size);
-	return new_arena;
-}
-
 Arena arena_from_buffer(u8* buf, usize bufsize){
 	Arena a = {
 		.data = (void*)buf,
@@ -222,6 +208,53 @@ void arena_destroy(Arena* a){
 	}
 }
 
+static
+AllocatorResult arena_allocator_func(
+	void* impl, u8 mode,
+	void* ptr,
+	usize old_size, usize old_align, /* Old layout */
+	usize new_size, usize new_align /* New Layout */
+){
+
+    Arena* a = (Arena*)impl;
+    AllocatorResult res = {.ptr = NULL};
+
+    switch((AllocatorMode)mode){
+    case Mem_Query:
+        res.modes = Mem_Alloc | Mem_FreeAll | Mem_Realloc;
+    break;
+
+    case Mem_Alloc:
+        res.ptr = arena_alloc(a, new_size, new_align);
+    break;
+
+    case Mem_Realloc:
+        ensure(old_align == new_align, "unsupported");
+        res.ptr = arena_realloc(a,  ptr, old_size, new_size, new_align);
+    break;
+
+    case Mem_Free:
+        /* Unsupported */
+    break;
+
+    case Mem_FreeAll:
+        arena_reset(a);
+    break;
+    }
+
+    return res;
+}
+
+Allocator arena_allocator(Arena* a){
+    return (Allocator){
+        .fn = arena_allocator_func,
+        .impl = a,
+    };
+}
+
+
+
+
 //// String
 #define MASKX 0x3f /* 0011_1111 */
 #define MASK2 0x1f /* 0001_1111 */
@@ -232,7 +265,7 @@ void arena_destroy(Arena* a){
 #define CONT_HI 0xbf
 
 struct UTF8AcceptRange { u8 lo, hi; };
- 
+
 static const
 struct UTF8AcceptRange utf8_accept_ranges[5] = {
 	{0x80, 0xbf},
@@ -419,4 +452,3 @@ bool spin_try_lock(Spinlock* l){
 #elif defined(BUILD_PLATFORM_LINUX)
 	#include "base_linux.c"
 #endif
-
