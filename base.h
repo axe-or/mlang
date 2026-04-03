@@ -1,6 +1,7 @@
 #pragma once
 
 //// Attributes and Compiler specifics
+#include <stdio.h>
 #if __STDC_VERSION__ >= 202311L
 	/* Nice, we have native typeof support */
 #else
@@ -333,7 +334,9 @@ typedef struct {
 	usize offset;
 	usize commited;
 	usize reserved;
+
 	void* last_allocation;
+	usize last_allocation_size;
 
 	u32 commit_size;
 	u16 region_count;
@@ -418,9 +421,10 @@ typedef struct {
 
 static inline
 bool raw_array_resize(RawArray* arr, usize new_cap, usize elem_size, usize elem_align) {
+    printf("RESZ: %zu -> %zu\n", arr->cap, new_cap);
 	void* new_data = mem_realloc(arr->allocator,
 	    arr->data,
-		elem_size * new_cap, elem_align,
+		elem_size * arr->cap, elem_align,
 		elem_size * new_cap, elem_align
 	);
 
@@ -513,11 +517,13 @@ void raw_array_destroy(RawArray* arr, usize size, usize align){
 
 #define array_len(arr) ((arr).array.len)
 
-#define array_init(arr, arena) do { \
-	(arr)->array = raw_array_make((arena)); \
+#define array_cap(arr) ((arr).array.cap)
+
+#define array_init(arr, allocator) do { \
+	(arr)->array = raw_array_make((allocator)); \
 } while(0)
 
-#define array_make(arena) { .array = raw_array_make((arena)) }
+#define array_make(allocator) { .array = raw_array_make((allocator)) }
 
 #define array_at(arr, idx) \
 	(typeof(arr._tag))(raw_array_at( \

@@ -7,6 +7,12 @@
 extern void abort();
 extern int printf(cstring, ...);
 
+#include <stdio.h>
+#define dbg(FMT, ...) do { \
+    printf("[(%s) %s:%d] " FMT "\n", __func__, __FILE__, __LINE__ __VA_OPT__(,) __VA_ARGS__); \
+    fflush(stdout); \
+} while(0)
+
 _Noreturn void trap(){
 	abort();
 	while(1);
@@ -43,6 +49,7 @@ bool arena_owns(Arena* a, void* p){
 
 bool arena_virtual_grow(Arena* a, usize size){
 	ensure(a->type == Arena_Virtual, "not a virtual arena");
+	ensure(a->commit_size >= virtual_page_size(), "invalid arena");
 
 	if(a->commited >= a->reserved){
 		return false;
@@ -51,13 +58,21 @@ bool arena_virtual_grow(Arena* a, usize size){
 
 	uintptr base = (uintptr)a->data;
 	uintptr start = base + a->commited;
-	uintptr reserved = base + a->reserved;
-	uintptr remaining = reserved - start;
+	uintptr end = base + a->reserved;
+	uintptr remaining = end - start;
 
-	bool ok = virtual_commit((void*)start, min(size, remaining));
-	if(ok){
-		a->commited += size;
+	if(size > remaining){
+    	return false;
 	}
+
+	bool ok = virtual_commit((void*)start, size);
+	ensure(ok, "failed to commit memory");
+
+	dbg("cleaning commited memory");
+	mem_set((void*)start, 69, size);
+
+	a->commited += size;
+
 	return ok;
 }
 
@@ -85,25 +100,29 @@ void* arena_alloc(Arena* a, usize size, usize align){
 			return NULL;
 		}
 
-		usize to_commit = max(size, ARENA_COMMIT_SIZE);
+		usize to_commit = max(size, a->commit_size);
 		if(!arena_virtual_grow(a, to_commit)){
 			return NULL;
 		}
-		return arena_alloc(a, size, align);
+		void* res =  arena_alloc(a, size, align);
+		return res;
 	}
 
 	a->offset += required;
 	void* allocation = (void*)aligned;
 
-	a->last_allocation = allocation;
 	mem_zero(allocation, size);
+
+	a->last_allocation = allocation;
+	a->last_allocation_size = size;
 
 	return allocation;
 }
 
 void* arena_realloc(Arena* a, void* ptr, usize old_size, usize new_size, usize align){
 	if(ptr == NULL){
-		return arena_alloc(a, new_size, align);
+    	void* res = arena_alloc(a, new_size, align);
+		return res;
 	}
 	ensure(arena_owns(a, ptr), "Pointer not owned by arena");
 
@@ -126,7 +145,9 @@ void* arena_realloc(Arena* a, void* ptr, usize old_size, usize new_size, usize a
 }
 
 bool arena_resize(Arena* a, void* ptr, usize new_size){
-	if(ptr == NULL){ return false; }
+	if(ptr == NULL){
+    	return false;
+	}
 	ensure(arena_owns(a, ptr), "Pointer not owned by arena");
 
 	uintptr base = (uintptr)a->data;
@@ -152,10 +173,14 @@ bool arena_resize(Arena* a, void* ptr, usize new_size){
 		}
 
 		usize old_offset = a->offset;
+		usize old_size = a->last_allocation_size;
+
 		a->offset = (last_alloc + new_size) - base;
-		if(a->offset > old_offset){
-			usize diff = a->offset - old_offset;
-			uintptr p = (uintptr)a->last_allocation + old_offset;
+		a->last_allocation_size = new_size;
+
+		if(new_size > old_size){
+			usize diff = new_size - old_size;
+			uintptr p = last_alloc + old_size;
 			mem_zero((void*)p, diff);
 		}
 		return true;
@@ -180,11 +205,12 @@ Arena arena_from_buffer(u8* buf, usize bufsize){
 Arena arena_from_virtual(usize reserve_size, u32 commit_size, u32 initial_commit_size){
 	if(commit_size == 0)
 		commit_size = arena_default_commit_size;
-	if(initial_commit_size == 0)
-		initial_commit_size = arena_default_initial_commit_size;
 
 	ensure(mem_valid_alignment(commit_size), "invalid commit size. expected a power of 2");
+	ensure(commit_size >= virtual_page_size(), "commit size too small");
+
 	void* data = virtual_reserve(reserve_size);
+	ensure(data != NULL, "failed to reserve memory");
 	Arena a = {
 		.data = data,
 		.offset = 0,
@@ -193,11 +219,13 @@ Arena arena_from_virtual(usize reserve_size, u32 commit_size, u32 initial_commit
 		.type = Arena_Virtual,
 		.last_allocation = NULL,
 		.region_count = 0,
+		.commit_size = commit_size,
 	};
 
 	if(initial_commit_size != 0){
 		arena_virtual_grow(&a, min(initial_commit_size, reserve_size));
 	}
+
 	return a;
 }
 
@@ -230,7 +258,7 @@ AllocatorResult arena_allocator_func(
 
     case Mem_Realloc:
         ensure(old_align == new_align, "unsupported");
-        res.ptr = arena_realloc(a,  ptr, old_size, new_size, new_align);
+        res.ptr = arena_realloc(a, ptr, old_size, new_size, new_align);
     break;
 
     case Mem_Free:

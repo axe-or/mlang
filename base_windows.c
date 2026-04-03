@@ -10,7 +10,7 @@ static usize _virtual_page_size = 4096;
 static bool _virtual_initialized = false;
 
 usize virtual_page_size(){
-	ensure_debug(_virtual_initialized, "virtual system info is not initialized, initialize it with virtual_init()");
+	ensure(_virtual_initialized, "virtual system info is not initialized, initialize it with virtual_init()");
 	return _virtual_page_size;
 }
 
@@ -196,4 +196,3 @@ void thread_destroy(Thread* t){
 	thread_join(t);
 	heap_free(t);
 }
-
