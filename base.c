@@ -66,10 +66,9 @@ bool arena_virtual_grow(Arena* a, usize size){
 	}
 
 	bool ok = virtual_commit((void*)start, size);
-	ensure(ok, "failed to commit memory");
-
-	dbg("cleaning commited memory");
-	mem_set((void*)start, 69, size);
+	if(!ok){
+	    return false;
+	}
 
 	a->commited += size;
 
