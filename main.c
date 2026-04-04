@@ -1,6 +1,12 @@
 #include "base.h"
 #include <stdio.h>
 
+#include "testing.h"
+
+void test_foo(Test* t){
+	t_expect(t, 2 + 2 == 3);
+}
+
 int main(){
     virtual_init();
     Arena arena = arena_from_virtual(8 * Mem_Gigabyte, 1 * Mem_Megabyte, 4 * Mem_Megabyte);
@@ -18,6 +24,8 @@ int main(){
         array_push(&arr, i);
     }
     printf("%zu %zu\n", array_len(arr), array_cap(arr));
+
+	test_run("Foo", test_foo);
 
     return 0;
 }

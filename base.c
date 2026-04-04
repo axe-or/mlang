@@ -7,11 +7,11 @@
 extern void abort();
 extern int printf(cstring, ...);
 
-#include <stdio.h>
-#define dbg(FMT, ...) do { \
-    printf("[(%s) %s:%d] " FMT "\n", __func__, __FILE__, __LINE__ __VA_OPT__(,) __VA_ARGS__); \
-    fflush(stdout); \
-} while(0)
+// #include <stdio.h>
+// #define dbg(FMT, ...) do { \
+//     printf("[(%s) %s:%d] " FMT "\n", __func__, __FILE__, __LINE__ __VA_OPT__(,) __VA_ARGS__); \
+//     fflush(stdout); \
+// } while(0)
 
 _Noreturn void trap(){
 	abort();

@@ -420,7 +420,6 @@ typedef struct {
 
 static inline
 bool raw_array_resize(RawArray* arr, usize new_cap, usize elem_size, usize elem_align) {
-    printf("RESZ: %zu -> %zu\n", arr->cap, new_cap);
 	void* new_data = mem_realloc(arr->allocator,
 	    arr->data,
 		elem_size * arr->cap, elem_align,
