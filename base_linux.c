@@ -1,6 +1,7 @@
 #include "base.h"
 #include <sys/unistd.h>
 #include <sys/mman.h>
+#include <semaphore.h>
 
 //// Virtual Memory
 
@@ -8,7 +9,7 @@ static usize _virtual_page_size = 4096;
 static bool _virtual_initialized = false;
 
 usize virtual_page_size(){
-	ensure_debug(_virtual_initialized, "virtual system info is not initialized, initialize it with virtual_init()");
+	ensure(_virtual_initialized, "virtual system info is not initialized, initialize it with virtual_init()");
 	return _virtual_page_size;
 }
 
@@ -57,11 +58,14 @@ void virtual_release(void* base, usize size){
 }
 
 //// Threads
+typedef struct {
+	char x;
+} ThreadPlatformSpecifc;
+
 Thread* thread_create(ThreadFunc func, void* arg){
 	(void)func; (void)arg;
 	TODO();
 }
-
 
 void thread_start(Thread* t){
 	TODO();

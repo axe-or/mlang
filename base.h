@@ -1,7 +1,6 @@
 #pragma once
 
 //// Attributes and Compiler specifics
-#include <stdio.h>
 #if __STDC_VERSION__ >= 202311L
 	/* Nice, we have native typeof support */
 #else
