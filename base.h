@@ -583,7 +583,7 @@ enum ThreadFlags {
 
 typedef union {
 	uintptr _align;
-	u8 data[16];
+	u8 data[32];
 } ThreadPlatformSpecificData;
 
 typedef void (*ThreadFunc)(Thread* t);
