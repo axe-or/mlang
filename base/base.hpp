@@ -148,8 +148,8 @@ struct Slice{
 private:
 	T* _data;
 	usize _len;
-public:
 
+public:
 	attribute_force_inline
 	Slice<T> take(usize n){
 		ensure(n <= _len, "cannot take more than length");
@@ -187,7 +187,56 @@ public:
 		return _data[idx];
 	}
 
-	attribute_force_inline constexpr auto len(){ return _len; }
-	attribute_force_inline constexpr auto raw_data(){ return _data; }
+	static Slice<T> from(T* p, usize len){
+		return Slice<T>{
+			._data = p,
+			._len = len,
+		};
+	}
+
+	attribute_force_inline constexpr auto len() const { return _len; }
+	attribute_force_inline constexpr auto raw_data() const { return _data; }
 };
+
+//// String
+struct String {
+private:
+	char const* _data;
+	usize _len;
+
+public:
+	constexpr
+	String() : _data{nullptr}, _len{0} {}
+
+	constexpr
+	String(char const* s) : _data{s}, _len{cstring_len(s)} {}
+
+	explicit constexpr
+	String(char const* s, usize n) : _data{s}, _len{n} {}
+
+	attribute_force_inline constexpr auto len() const { return _len; }
+	attribute_force_inline constexpr auto raw_data() const { return _data; }
+};
+
+// The error unicode codepoint
+constexpr rune rune_error = 0xfffd;
+
+// Decoded form of a unicode codepoint
+struct RuneDecoded {
+	rune codepoint;
+	u32  size;
+};
+
+// Encoded form of a unicode codepoint
+struct RuneEncoded {
+	u8  bytes[4];
+	u32 size;
+};
+
+// Encode a codepoint `r` to UTF-8
+RuneEncoded rune_encode(rune r);
+
+// Decode the first rune of a UTF-8 encoded buffer
+RuneDecoded rune_decode(u8 const* buf, u32 buflen);
+
 

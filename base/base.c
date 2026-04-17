@@ -279,9 +279,6 @@ Allocator arena_allocator(Arena* a){
     };
 }
 
-
-
-
 //// String
 #define MASKX 0x3f /* 0011_1111 */
 #define MASK2 0x1f /* 0001_1111 */

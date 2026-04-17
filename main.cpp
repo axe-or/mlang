@@ -25,3 +25,9 @@ int main(){
 	Slice<f32> s = {};
 	printf("srcloc: %zu\n", sizeof(sourcelocation));
 }
+
+
+#include "base/base.cpp"
+// TODO: Get rid of this
+#define STB_SPRINTF_IMPLEMENTATION
+#include "stb_sprintf.h"
