@@ -1,5 +1,8 @@
 #include "base/base.hpp"
 #include "base/memory.hpp"
+#include "base/virtual.hpp"
+#include "base/dyn_array.hpp"
+#include "base/arena.hpp"
 
 extern "C" int printf(cstring, ...);
 
@@ -22,7 +25,17 @@ void ensure(bool predicate, cstring msg, sourcelocation loc) {
 }
 
 int main(){
-	Slice<f32> s = {};
+	virtual_init();
+	auto arena = Arena::from_virtual(512 * mem_megabyte);
+	auto allocator = arena.allocator();
+
+	auto nums = make_dyn_array<f32>(allocator);
+
+	for(int i = 0; i < 20; i++){
+		nums.push(f32(i) / 2 * 5);
+		printf("%f\n", nums[i]);
+	}
+
 	printf("srcloc: %zu\n", sizeof(sourcelocation));
 }
 

@@ -103,6 +103,16 @@ T clamp(T lo, T x, T hi){
 	return min(max((lo), (x)), (hi));
 }
 
+template<typename A, typename B = A>
+struct Pair {
+	A a;
+	B b;
+};
+
+struct Nat {};
+
+void* operator new (size_t, void*, Nat);
+
 // Helpers that use preprocessor expansion tricks to "glue" identifiers
 #define ident_concat0(x, y) x##y
 #define ident_concat1(x, y) ident_concat0(x, y)
@@ -137,10 +147,6 @@ usize cstring_len(cstring cs) {
 	return n;
 }
 
-struct Nat {};
-
-void* operator new (size_t, void*, Nat);
-
 //// Slice
 
 template<typename T>
@@ -151,51 +157,46 @@ private:
 
 public:
 	attribute_force_inline
-	Slice<T> take(usize n){
-		ensure(n <= _len, "cannot take more than length");
-		return Slice<T>{
-			._data = _data,
-			._len = n,
-		};
+	Slice<T> take(usize n, sourcelocation loc = sourcelocation::current()){
+		ensure(n <= _len, "cannot take more than length", loc);
+		return Slice<T>{ _data, n };
 	}
 
 	attribute_force_inline
-	Slice<T> skip(usize n){
-		ensure(n <= _len, "cannot skip more than length");
-		return Slice<T>{
-			._data = &_data[n],
-			._len = _len - n,
-		};
+	Slice<T> skip(usize n, sourcelocation loc = sourcelocation::current()){
+		ensure(n <= _len, "cannot skip more than length", loc);
+		return Slice<T>{ &_data[n], _len - n };
 	}
 
 	attribute_force_inline
-	Slice<T> slice(usize start, usize end){
-		ensure(end <= _len && start <= end, "invalid slice indexes");
-		return Slice<T>{
-			._data = &_data[start],
-			._len = end - start,
-		};
+	Slice<T> slice(usize start, usize end, sourcelocation loc = sourcelocation::current()){
+		ensure(end <= _len && start <= end, "invalid slice indexes", loc);
+		return Slice<T>{ &_data[start], end - start };
 	}
 
 	T& operator[](usize idx){
-		ensure(idx < _len, "index out of bounds");
+		ensure(idx < _len, "slice index out of bounds");
 		return _data[idx];
 	}
 
 	T const& operator[](usize idx) const {
-		ensure(idx < _len, "index out of bounds");
+		ensure(idx < _len, "slice index out of bounds");
 		return _data[idx];
 	}
 
 	static Slice<T> from(T* p, usize len){
 		return Slice<T>{
-			._data = p,
-			._len = len,
+			p,
+			len,
 		};
 	}
 
 	attribute_force_inline constexpr auto len() const { return _len; }
 	attribute_force_inline constexpr auto raw_data() const { return _data; }
+
+	Slice<T>(): _data{nullptr}, _len{0} {}
+
+	Slice<T>(T* data, usize len): _data{data}, _len{len} {}
 };
 
 //// String

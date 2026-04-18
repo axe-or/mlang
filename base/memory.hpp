@@ -106,6 +106,7 @@ struct Allocator {
 	u8 query(){
 		return _fn(_impl, Mem_FreeAll, NULL, 0, 0, 0, 0).modes;
 	}
+
 };
 
 template<typename T>
@@ -113,4 +114,16 @@ T* make(Allocator a){
 	T* p = (T*)a.alloc(sizeof(T), alignof(T));
 	new (p, Nat{}) T{};
 	return p;
+}
+
+template<typename T>
+Slice<T> make_slice(Allocator a, usize n){
+	T* p = (T*)a.alloc(sizeof(T) * n, alignof(T));
+	if(!p){
+		return Slice<T>{nullptr, 0};
+	}
+	for(usize i = 0; i < n; i++){
+		new (&p[i], Nat{}) T{};
+	}
+	return Slice<T>{p, n};
 }
