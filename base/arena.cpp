@@ -46,7 +46,6 @@ bool arena_virtual_grow(Arena* a, usize size){
 	return ok;
 }
 
-static
 void arena_virtual_decommit(Arena* a, usize size){
 	ensure(a->type == Arena_Virtual, "Not a virtual arena");
 
