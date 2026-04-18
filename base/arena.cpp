@@ -3,16 +3,16 @@
 
 //// Arena
 
-void Arena::reset(){
-	ensure(this->region_count == 0, "Arena has dangling regions");
-	this->offset = 0;
-	this->last_allocation = NULL;
+void arena_reset(Arena* a){
+	ensure(a->region_count == 0, "Arena has dangling regions");
+	a->offset = 0;
+	a->last_allocation = NULL;
 }
 
-bool Arena::owns(void* p){
+bool arena_owns(Arena* a, void* p){
 	uintptr ptr = (uintptr)p;
-	uintptr lo = (uintptr)this->data;
-	uintptr hi = lo + this->reserved;
+	uintptr lo = (uintptr)a->data;
+	uintptr hi = lo + a->reserved;
 
 	return (ptr >= lo) && (ptr <= hi);
 }
@@ -46,6 +46,7 @@ bool arena_virtual_grow(Arena* a, usize size){
 	return ok;
 }
 
+static
 void arena_virtual_decommit(Arena* a, usize size){
 	ensure(a->type == Arena_Virtual, "Not a virtual arena");
 
@@ -54,98 +55,72 @@ void arena_virtual_decommit(Arena* a, usize size){
 	a->commited = a->commited - size;
 }
 
-void* Arena::alloc(usize size, usize align){
+void* arena_alloc(Arena* a, usize size, usize align){
 	if(size == 0){ return NULL; }
-	uintptr base = (uintptr)this->data;
-	uintptr current = base + (uintptr)this->offset;
+	uintptr base = (uintptr)a->data;
+	uintptr current = base + (uintptr)a->offset;
 
-	usize available = this->commited - (current - base);
+	usize available = a->commited - (current - base);
 
 	uintptr aligned  = mem_align_forward_ptr(current, align);
 	uintptr padding  = aligned - current;
 	uintptr required = padding + size;
 
 	if(required > available){
-		if(this->type == Arena_Buffer){
+		if(a->type == Arena_Buffer){
 			return NULL;
 		}
 
-		usize to_commit = max(size, (usize)this->commit_size);
-		if(!arena_virtual_grow(this, to_commit)){
+		usize to_commit = max(size, (usize)a->commit_size);
+		if(!arena_virtual_grow(a, to_commit)){
 			return NULL;
 		}
-		void* res = this->alloc(size, align);
-		return res;
+		return arena_alloc(a, size, align);
 	}
 
-	this->offset += required;
+	a->offset += required;
 	void* allocation = (void*)aligned;
 
 	mem_zero(allocation, size);
 
-	this->last_allocation = allocation;
-	this->last_allocation_size = size;
+	a->last_allocation = allocation;
+	a->last_allocation_size = size;
 
 	return allocation;
 }
 
-void* Arena::realloc(void* ptr, usize old_size, usize new_size, usize align){
-	if(ptr == NULL){
-    	void* res = this->alloc(new_size, align);
-		return res;
-	}
-	ensure(this->owns(ptr), "Pointer not owned by arena");
-
-	bool in_place = this->resize(ptr, new_size);
-	if(in_place){
-		return ptr;
-	}
-	else {
-		void* new_data = this->alloc(new_size, align);
-		if(new_data == NULL){ return NULL; } /* Out of memory */
-		mem_copy(new_data, ptr, min(old_size, new_size));
-
-		if(new_size > old_size){
-			usize diff = new_size - old_size;
-			mem_zero((u8*)new_data + old_size, diff);
-		}
-
-		return new_data;
-	}
-}
-
-bool Arena::resize(void* ptr, usize new_size){
+bool arena_resize(Arena* a, void* ptr, usize new_size){
 	if(ptr == NULL){
     	return false;
 	}
-	ensure(this->owns(ptr), "Pointer not owned by arena");
+	ensure(arena_owns(a, ptr), "Pointer not owned by arena");
 
-	uintptr base = (uintptr)this->data;
+	uintptr base = (uintptr)a->data;
 
-	if(ptr == this->last_allocation){
-		uintptr last_alloc = (uintptr)this->last_allocation;
-		uintptr can_commit = this->reserved - this->commited;
+	if(ptr == a->last_allocation){
+		uintptr last_alloc = (uintptr)a->last_allocation;
+		uintptr can_commit = a->reserved - a->commited;
 
-		if((last_alloc + new_size) > (base + this->commited)){
-			if(this->type == Arena_Buffer){
+		if((last_alloc + new_size) > (base + a->commited)){
+			if(a->type == Arena_Buffer){
 				return false; /* No space left, cannot grow */
 			}
 			else if(new_size <= can_commit) {
-				bool ok = arena_virtual_grow(this, mem_align_forward_ptr(new_size, this->commit_size));
+				bool ok = arena_virtual_grow(a, mem_align_forward_ptr(new_size, a->commit_size));
 				if(!ok){
 					return false; /* Failed to grow arena */
 				}
-				return this->resize(ptr, new_size);
+				return arena_resize(a, ptr, new_size);
 			}
 			else {
 				return false;
 			}
 		}
 
-		usize old_size = this->last_allocation_size;
+		usize old_size = a->last_allocation_size;
 
-		this->offset = (last_alloc + new_size) - base;
-		this->last_allocation_size = new_size;
+		a->offset = (last_alloc + new_size) - base;
+		a->last_allocation_size = new_size;
 
 		if(new_size > old_size){
 			usize diff = new_size - old_size;
@@ -158,7 +133,31 @@ bool Arena::resize(void* ptr, usize new_size){
 	return false;
 }
 
-Arena Arena::from_buffer(u8* buf, usize bufsize){
+void* arena_realloc(Arena* a, void* ptr, usize old_size, usize new_size, usize align){
+	if(ptr == NULL){
+    	return arena_alloc(a, new_size, align);
+	}
+	ensure(arena_owns(a, ptr), "Pointer not owned by arena");
+
+	bool in_place = arena_resize(a, ptr, new_size);
+	if(in_place){
+		return ptr;
+	}
+	else {
+		void* new_data = arena_alloc(a, new_size, align);
+		if(new_data == NULL){ return NULL; } /* Out of memory */
+		mem_copy(new_data, ptr, min(old_size, new_size));
+
+		if(new_size > old_size){
+			usize diff = new_size - old_size;
+			mem_zero((u8*)new_data + old_size, diff);
+		}
+
+		return new_data;
+	}
+}
+
+Arena arena_from_buffer(u8* buf, usize bufsize){
 	Arena a = {
 		.data = (void*)buf,
 		.offset = 0,
@@ -174,7 +173,7 @@ Arena Arena::from_buffer(u8* buf, usize bufsize){
 	return a;
 }
 
-Arena Arena::from_virtual(usize reserve_size, u32 commit_size, u32 initial_commit_size){
+Arena arena_from_virtual(usize reserve_size, u32 commit_size, u32 initial_commit_size){
 	if(commit_size == 0)
 		commit_size = arena_default_commit_size;
 
@@ -203,10 +202,10 @@ Arena Arena::from_virtual(usize reserve_size, u32 commit_size, u32 initial_commi
 	return a;
 }
 
-void Arena::destroy(){
-	this->reset();
-	if(this->type == Arena_Virtual){
-		virtual_release(this->data, this->reserved);
+void arena_destroy(Arena* a){
+	arena_reset(a);
+	if(a->type == Arena_Virtual){
+		virtual_release(a->data, a->reserved);
 	}
 }
 
@@ -218,7 +217,6 @@ AllocatorResult arena_allocator_func(
 	usize old_size, usize old_align, /* Old layout */
 	usize new_size, usize new_align /* New Layout */
 ){
-
     Arena* a = (Arena*)impl;
     AllocatorResult res = {.ptr = NULL};
 
@@ -228,12 +226,12 @@ AllocatorResult arena_allocator_func(
     break;
 
     case Mem_Alloc:
-        res.ptr = a->alloc(new_size, new_align);
+        res.ptr = arena_alloc(a, new_size, new_align);
     break;
 
     case Mem_Realloc:
         ensure(old_align == new_align, "unsupported");
-        res.ptr = a->realloc(ptr, old_size, new_size, new_align);
+        res.ptr = arena_realloc(a, ptr, old_size, new_size, new_align);
     break;
 
     case Mem_Free:
@@ -241,16 +239,16 @@ AllocatorResult arena_allocator_func(
     break;
 
     case Mem_FreeAll:
-		a->reset();
+		arena_reset(a);
     break;
     }
 
     return res;
 }
 
-Allocator Arena::allocator(){
+Allocator arena_allocator(Arena* a){
     return Allocator{
-        ._impl = this,
+        ._impl = a,
         ._fn = arena_allocator_func,
     };
 }

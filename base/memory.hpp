@@ -86,39 +86,43 @@ using AllocatorFunc = AllocatorResult (*)(
 struct Allocator {
 	void* _impl;
 	AllocatorFunc _fn;
-
-	void* alloc(usize size, usize align){
-		return _fn(_impl, Mem_Alloc, NULL, 0, 0, size, align).ptr;
-	}
-
-	void* realloc(void* ptr, usize old_size, usize old_align, usize new_size, usize new_align){
-		return _fn(_impl, Mem_Realloc, ptr, old_size, old_align, new_size, new_align).ptr;
-	}
-
-	void free(void* ptr, usize size, usize align){
-		_fn(_impl, Mem_Free, ptr, size, align, 0, 0);
-	}
-
-	void free_all(){
-		_fn(_impl, Mem_FreeAll, NULL, 0, 0, 0, 0);
-	}
-
-	u8 query(){
-		return _fn(_impl, Mem_FreeAll, NULL, 0, 0, 0, 0).modes;
-	}
-
 };
+
+attribute_force_inline static
+void* mem_alloc(Allocator a, usize size, usize align){
+	return a._fn(a._impl, Mem_Alloc, NULL, 0, 0, size, align).ptr;
+}
+
+attribute_force_inline static
+void* mem_realloc(Allocator a, void* ptr, usize old_size, usize old_align, usize new_size, usize new_align){
+	return a._fn(a._impl, Mem_Realloc, ptr, old_size, old_align, new_size, new_align).ptr;
+}
+
+attribute_force_inline static
+void mem_free(Allocator a, void* ptr, usize size, usize align){
+	a._fn(a._impl, Mem_Free, ptr, size, align, 0, 0);
+}
+
+attribute_force_inline static
+void mem_free_all(Allocator a){
+	a._fn(a._impl, Mem_FreeAll, NULL, 0, 0, 0, 0);
+}
+
+attribute_force_inline static
+u8 mem_query(Allocator a){
+	return a._fn(a._impl, Mem_Query, NULL, 0, 0, 0, 0).modes;
+}
 
 template<typename T>
 T* make(Allocator a){
-	T* p = (T*)a.alloc(sizeof(T), alignof(T));
+	T* p = (T*)mem_alloc(a, sizeof(T), alignof(T));
 	new (p, Nat{}) T{};
 	return p;
 }
 
 template<typename T>
 Slice<T> make_slice(Allocator a, usize n){
-	T* p = (T*)a.alloc(sizeof(T) * n, alignof(T));
+	T* p = (T*)mem_alloc(a, sizeof(T) * n, alignof(T));
 	if(!p){
 		return Slice<T>{nullptr, 0};
 	}

@@ -29,7 +29,8 @@ public:
 	friend attribute_force_inline constexpr T*    raw_data(DynArray<T> a)  { return a->data; }
 
 	friend bool resize(DynArray<T>* a, usize new_cap){
-		void* new_data = a->allocator.realloc(
+		void* new_data = mem_realloc(
+			a->allocator,
 			a->data,
 			sizeof(T) * a->cap, alignof(T),
 			sizeof(T) * new_cap, alignof(T)
@@ -81,7 +82,7 @@ public:
 	}
 
 	friend void destroy(DynArray<T>* a){
-		a->allocator.free(a->data, sizeof(T) * a->cap, alignof(T));
+		mem_free(a->allocator, a->data, sizeof(T) * a->cap, alignof(T));
 		a->cap = 0; a->len = 0;
 	}
 

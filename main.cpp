@@ -26,8 +26,8 @@ void ensure(bool predicate, cstring msg, sourcelocation loc) {
 
 int main(){
 	virtual_init();
-	auto arena = Arena::from_virtual(512 * mem_megabyte);
-	auto allocator = arena.allocator();
+	auto arena = arena_from_virtual(512 * mem_megabyte);
+	auto allocator = arena_allocator(&arena);
 
 	auto nums = make_dyn_array<f32>(allocator);
 

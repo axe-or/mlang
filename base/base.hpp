@@ -210,10 +210,10 @@ public:
 
 	explicit constexpr
 	String(char const* s, usize n) : _data{s}, _len{n} {}
-
-	friend attribute_force_inline constexpr usize       len(String s)      { return s._len; }
-	friend attribute_force_inline constexpr char const* raw_data(String s) { return s._data; }
 };
+
+attribute_force_inline constexpr usize       len(String s)      { return s.len; }
+attribute_force_inline constexpr char const* raw_data(String s) { return s.data; }
 
 // The error unicode codepoint
 constexpr rune rune_error = 0xfffd;
