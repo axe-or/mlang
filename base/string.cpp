@@ -1,4 +1,5 @@
 #include "base.hpp"
+#include "string_builder.hpp"
 #include "stb_sprintf.h"
 
 //// String
@@ -172,3 +173,60 @@ String buffer_printf(u8* buf, usize bufsize, char const* fmt, ...) {
 // 	va_end(args);
 // 	return res;
 // }
+
+//// String Builder
+
+StringBuilder sb_create(Allocator a){
+	return StringBuilder{ DynArray<u8>{a} };
+}
+
+void sb_destroy(StringBuilder* sb){
+	destroy(&sb->buf);
+}
+
+void sb_reset(StringBuilder* sb){
+	clear(&sb->buf);
+}
+
+bool sb_grow(StringBuilder* sb, usize n){
+	usize needed = len(sb->buf) + n;
+	if(needed <= cap(sb->buf)){
+		return true;
+	}
+	return resize(&sb->buf, needed);
+}
+
+bool sb_write_byte(StringBuilder* sb, u8 b){
+	return append(&sb->buf, b);
+}
+
+bool sb_write_bytes(StringBuilder* sb, Slice<u8> data){
+	return append_slice(&sb->buf, data);
+}
+
+bool sb_write_string(StringBuilder* sb, String s){
+	usize n = len(s);
+	if(!sb_grow(sb, n)){ return false; }
+	for(usize i = 0; i < n; i++){
+		append(&sb->buf, (u8)raw_data(s)[i]);
+	}
+	return true;
+}
+
+bool sb_write_rune(StringBuilder* sb, rune r){
+	RuneEncoded enc = rune_encode(r);
+	for(u32 i = 0; i < enc.size; i++){
+		if(!append(&sb->buf, enc.bytes[i])){ return false; }
+	}
+	return true;
+}
+
+String sb_to_string(StringBuilder* sb){
+	return String{ (char const*)raw_data(sb->buf), len(sb->buf) };
+}
+
+String sb_build(StringBuilder const& sb, Allocator a){
+	auto buf = make_slice<u8>(a, len(sb) + 1);
+	copy(buf, slice(sb.buf));
+	return String{(char const*)raw_data(buf), len(buf)};
+}

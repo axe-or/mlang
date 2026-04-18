@@ -85,16 +85,16 @@ using cstring = const char*;
 
 using sourcelocation = std::source_location;
 
-template<typename T>
+template<typename T, typename U = T>
 constexpr attribute_force_inline
-T min(T x, T y){
-	return x < y ? x : y;
+T min(T x, U y){
+	return x < static_cast<T>(y) ? x : static_cast<T>(y);
 }
 
-template<typename T>
+template<typename T, typename U = T>
 constexpr attribute_force_inline
-T max(T x, T y){
-	return x > y ? x : y;
+T max(T x, U y){
+	return x > static_cast<T>(y) ? x : static_cast<T>(y);
 }
 
 template<typename T>
@@ -193,7 +193,22 @@ public:
 		ensure(end <= s._len && start <= end, "invalid slice indexes", loc);
 		return Slice<T>{ &s._data[start], end - start };
 	}
+
+	[[nodiscard]] friend attribute_force_inline
+	Slice<T> slice(Slice<T> s){
+		// NOTE: Idempotent on purpose, mostly for symmetry with DynArray
+		return s;
+	}
 };
+
+extern "C" void* memmove(void*, void const*, usize);
+
+template<typename T>
+Slice<T> copy(Slice<T> dst, Slice<T> src){
+	usize n = min(len(dst), len(src));
+	memmove(raw_data(dst), raw_data(src), n * sizeof(T));
+	return Slice<T>{raw_data(dst), n};
+}
 
 //// String
 struct String {
