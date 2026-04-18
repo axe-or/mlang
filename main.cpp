@@ -32,9 +32,11 @@ int main(){
 	auto nums = make_dyn_array<f32>(allocator);
 
 	for(int i = 0; i < 20; i++){
-		nums.push(f32(i) / 2 * 5);
+		append(&nums, f32(i) / 2 * 5);
 		printf("%f\n", nums[i]);
 	}
+
+	slice(nums, 7, 21);
 
 	printf("srcloc: %zu\n", sizeof(sourcelocation));
 }

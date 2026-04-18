@@ -5,114 +5,106 @@
 template<typename T>
 struct DynArray {
 private:
-	T*     _data;
-	usize  _len;
-	usize  _cap;
-	Allocator _allocator;
+	T*        data;
+	usize     len;
+	usize     cap;
+	Allocator allocator;
 
 public:
-	bool resize(usize new_cap) {
-		void* new_data = _allocator.realloc(
-			_data,
-			sizeof(T) * _cap, alignof(T),
-			sizeof(T) * new_cap, alignof(T)
-		);
-
-		if(!new_data){
-			return false;
-		}
-
-		_data = (T*)new_data;
-		_cap = new_cap;
-		_len = min(_len, new_cap);
-		return true;
-	}
-
-	bool push(T const& v){
-		if(_len >= _cap){
-			if(!this->resize(max<usize>(_cap * 2, 16))){
-				return false;
-			}
-		}
-
-		_data[_len] = v;
-		_len += 1;
-		return true;
-	}
-
-	void remove(usize idx, sourcelocation loc = sourcelocation::current()){
-		ensure(idx < _len, "out of bounds remove", loc);
-		if(!_len){ return; }
-
-		void* remove = (void*)&_data[idx];
-		void* rest = (void*)&_data[idx + 1];
-		usize shift_by = (_len - idx) * sizeof(T);
-
-		mem_copy(remove, rest, shift_by);
-		_len -= 1;
-	}
-
-	bool insert(usize idx, T const& elem, sourcelocation loc = sourcelocation::current()){
-		ensure(idx <= _len, "out of bounds insert", loc);
-		if(_len >= _cap){
-			if(!this->resize(max<usize>(_cap * 2, 16), sizeof(T), alignof(T))){
-				return false;
-			}
-		}
-
-		void* insert = (void*)&_data[idx];
-		void* next = (void*)&_data[idx + 1];
-		usize shift_by = (_len - idx) * sizeof(T);
-
-		mem_copy(next, insert, shift_by);
-
-		_len += 1;
-		_data[idx] = elem;
-
-		return true;
-	}
-
-	void destroy(){
-		_allocator.free(_data, sizeof(T) * _cap, alignof(T));
-		_cap = 0; _len = 0;
-	}
-
-	attribute_force_inline
-	Slice<T> take(usize n, sourcelocation loc = sourcelocation::current()){
-		ensure(n <= _len, "cannot take more than length", loc);
-		return Slice<T>{ _data, n };
-	}
-
-	attribute_force_inline
-	Slice<T> skip(usize n, sourcelocation loc = sourcelocation::current()){
-		ensure(n <= _len, "cannot skip more than length", loc);
-		return Slice<T>{ &_data[n], _len - n };
-	}
-
-	attribute_force_inline
-	Slice<T> slice(usize start, usize end, sourcelocation loc = sourcelocation::current()){
-		ensure(end <= _len && start <= end, "invalid slice indexes", loc);
-		return Slice<T>{ &_data[start], end - start };
-	}
+	DynArray<T>() : data{nullptr}, len{0}, cap{0}, allocator{} {}
+	explicit DynArray<T>(Allocator a) : data{nullptr}, len{0}, cap{0}, allocator{a} {}
 
 	T& operator[](usize idx){
-		ensure(idx < _len, "slice index out of bounds");
-		return _data[idx];
+		ensure(idx < len, "index out of bounds");
+		return data[idx];
 	}
 
 	T const& operator[](usize idx) const {
-		ensure(idx < _len, "slice index out of bounds");
-		return _data[idx];
+		ensure(idx < len, "index out of bounds");
+		return data[idx];
 	}
 
-	static DynArray<T> from(Allocator a){
-		DynArray arr = {};
-		arr._allocator = a;
-		return arr;
+	friend attribute_force_inline constexpr usize len(DynArray<T> const& a) { return a->len; }
+	friend attribute_force_inline constexpr usize cap(DynArray<T> const& a) { return a->cap; }
+	friend attribute_force_inline constexpr T*    raw_data(DynArray<T> a)  { return a->data; }
+
+	friend bool resize(DynArray<T>* a, usize new_cap){
+		void* new_data = a->allocator.realloc(
+			a->data,
+			sizeof(T) * a->cap, alignof(T),
+			sizeof(T) * new_cap, alignof(T)
+		);
+
+		if(!new_data){ return false; }
+
+		a->data = (T*)new_data;
+		a->cap  = new_cap;
+		a->len  = min(a->len, new_cap);
+		return true;
+	}
+
+	friend bool append(DynArray<T>* a, T const& v){
+		if(a->len >= a->cap){
+			if(!resize(a, max<usize>(a->cap * 2, 16))){ return false; }
+		}
+		a->data[a->len] = v;
+		a->len += 1;
+		return true;
+	}
+
+	friend void remove(DynArray<T>* a, usize idx, sourcelocation loc = sourcelocation::current()){
+		ensure(idx < a->len, "out of bounds remove", loc);
+		if(!a->len){ return; }
+
+		void* dst      = (void*)&a->data[idx];
+		void* src      = (void*)&a->data[idx + 1];
+		usize shift_by = (a->len - idx) * sizeof(T);
+
+		mem_copy(dst, src, shift_by);
+		a->len -= 1;
+	}
+
+	friend bool insert(DynArray<T>* a, usize idx, T const& elem, sourcelocation loc = sourcelocation::current()){
+		ensure(idx <= a->len, "out of bounds insert", loc);
+		if(a->len >= a->cap){
+			if(!resize(a, max<usize>(a->cap * 2, 16))){ return false; }
+		}
+
+		void* dst      = (void*)&a->data[idx + 1];
+		void* src      = (void*)&a->data[idx];
+		usize shift_by = (a->len - idx) * sizeof(T);
+
+		mem_copy(dst, src, shift_by);
+		a->len += 1;
+		a->data[idx] = elem;
+		return true;
+	}
+
+	friend void destroy(DynArray<T>* a){
+		a->allocator.free(a->data, sizeof(T) * a->cap, alignof(T));
+		a->cap = 0; a->len = 0;
+	}
+
+	[[nodiscard]] friend attribute_force_inline
+	Slice<T> take(DynArray<T> const& a, usize n, sourcelocation loc = sourcelocation::current()){
+		ensure(n <= a.len, "cannot take more than length", loc);
+		return Slice<T>{ a.data, n };
+	}
+
+	[[nodiscard]] friend attribute_force_inline
+	Slice<T> skip(DynArray<T> const& a, usize n, sourcelocation loc = sourcelocation::current()){
+		ensure(n <= a.len, "cannot skip more than length", loc);
+		return Slice<T>{ &a.data[n], a.len - n };
+	}
+
+	[[nodiscard]] friend attribute_force_inline
+	Slice<T> slice(DynArray<T> const& a, usize start, usize end, sourcelocation loc = sourcelocation::current()){
+		ensure(end <= a.len && start <= end, "invalid slice indexes", loc);
+		return Slice<T>{ &a.data[start], end - start };
 	}
 };
 
-template<typename T>
+template<typename T> [[nodiscard]]
 DynArray<T> make_dyn_array(Allocator a){
-	return DynArray<T>::from(a);
+	return DynArray<T>{a};
 }

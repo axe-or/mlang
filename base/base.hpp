@@ -156,24 +156,6 @@ private:
 	usize _len;
 
 public:
-	attribute_force_inline
-	Slice<T> take(usize n, sourcelocation loc = sourcelocation::current()){
-		ensure(n <= _len, "cannot take more than length", loc);
-		return Slice<T>{ _data, n };
-	}
-
-	attribute_force_inline
-	Slice<T> skip(usize n, sourcelocation loc = sourcelocation::current()){
-		ensure(n <= _len, "cannot skip more than length", loc);
-		return Slice<T>{ &_data[n], _len - n };
-	}
-
-	attribute_force_inline
-	Slice<T> slice(usize start, usize end, sourcelocation loc = sourcelocation::current()){
-		ensure(end <= _len && start <= end, "invalid slice indexes", loc);
-		return Slice<T>{ &_data[start], end - start };
-	}
-
 	T& operator[](usize idx){
 		ensure(idx < _len, "slice index out of bounds");
 		return _data[idx];
@@ -184,19 +166,33 @@ public:
 		return _data[idx];
 	}
 
-	static Slice<T> from(T* p, usize len){
-		return Slice<T>{
-			p,
-			len,
-		};
-	}
-
-	attribute_force_inline constexpr auto len() const { return _len; }
-	attribute_force_inline constexpr auto raw_data() const { return _data; }
-
 	Slice<T>(): _data{nullptr}, _len{0} {}
 
 	Slice<T>(T* data, usize len): _data{data}, _len{len} {}
+
+	friend attribute_force_inline constexpr
+	usize len(Slice<T> s){ return s._len; }
+
+	friend attribute_force_inline constexpr
+	T* raw_data(Slice<T> s){ return s._data; }
+
+	[[nodiscard]] friend attribute_force_inline
+	Slice<T> take(Slice<T> s, usize n, sourcelocation loc = sourcelocation::current()){
+		ensure(n <= s._len, "cannot take more than length", loc);
+		return Slice<T>{ s._data, n };
+	}
+
+	[[nodiscard]] friend attribute_force_inline
+	Slice<T> skip(Slice<T> s, usize n, sourcelocation loc = sourcelocation::current()){
+		ensure(n <= s._len, "cannot skip more than length", loc);
+		return Slice<T>{ &s._data[n], s._len - n };
+	}
+
+	[[nodiscard]] friend attribute_force_inline
+	Slice<T> slice(Slice<T> s, usize start, usize end, sourcelocation loc = sourcelocation::current()){
+		ensure(end <= s._len && start <= end, "invalid slice indexes", loc);
+		return Slice<T>{ &s._data[start], end - start };
+	}
 };
 
 //// String
@@ -215,8 +211,8 @@ public:
 	explicit constexpr
 	String(char const* s, usize n) : _data{s}, _len{n} {}
 
-	attribute_force_inline constexpr auto len() const { return _len; }
-	attribute_force_inline constexpr auto raw_data() const { return _data; }
+	friend attribute_force_inline constexpr usize       len(String s)      { return s._len; }
+	friend attribute_force_inline constexpr char const* raw_data(String s) { return s._data; }
 };
 
 // The error unicode codepoint
