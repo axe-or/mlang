@@ -1,6 +1,10 @@
 #include "memory.hpp"
 
-#include "mimalloc.h"
+extern "C" {
+void* mi_zalloc_aligned(size_t size, size_t alignment);
+void* mi_rezalloc_aligned(void* p, size_t size, size_t alignment);
+void mi_free(void* p);
+}
 
 static
 AllocatorResult mimalloc_allocator_func(
@@ -22,7 +26,7 @@ AllocatorResult mimalloc_allocator_func(
 		break;
 
 	case Mem_Realloc:
-		res.ptr = mi_realloc_aligned(ptr, new_size, new_align);
+		res.ptr = mi_rezalloc_aligned(ptr, new_size, new_align);
 		break;
 
 	case Mem_Free:

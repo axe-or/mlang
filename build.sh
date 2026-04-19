@@ -5,7 +5,7 @@ cc='clang++'
 cflags='-std=c++20 -fno-strict-aliasing -fno-exceptions -fno-rtti -nodefaultlibs'
 
 incflags='-I.'
-ldflags='-L. -lc -fuse-ld=mold'
+ldflags='-L. -L/usr/local/lib -lc -fuse-ld=mold'
 optflags='-O0 -g'
 wflags='-Wall -Wextra -Werror=return-type'
 

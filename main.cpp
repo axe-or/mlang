@@ -6,40 +6,39 @@
 
 extern "C" int printf(cstring, ...);
 
-[[noreturn]]
-void trap(){
-	do { __builtin_trap(); } while(1);
+#include "base/testing.hpp"
+
+void foo_test(Test* t){
+	t->name = "Foo";
+
+	t_expect(t, 2 + 2 == 4, "Dale");
 }
 
-[[noreturn]]
-void panic(cstring msg, sourcelocation loc){
-	printf("(%s:%d) panic: %s\n", loc.file_name(), loc.line(), msg);
-		trap();
-}
-
-void ensure(bool predicate, cstring msg, sourcelocation loc) {
-	if(!predicate){
-		printf("(%s:%d) panic: %s\n", loc.file_name(), loc.line(), msg);
-		trap();
-	}
+void testmain(){
+	auto runner = tests_create();
+	tests_add(runner, foo_test);
+	tests_run(runner);
 }
 
 int main(){
-	// virtual_init();
-	// auto arena = arena_from_virtual(512 * mem_megabyte);
-	// auto allocator = arena_allocator(&arena);
+	virtual_init();
+	testmain();
+	// auto nums = make_dyn_array<f32>(heap_allocator());
 
-	auto nums = make_dyn_array<f32>(heap_allocator());
+	// for(int i = 0; i < 69; i++){
+	// 	append(&nums, f32(i) / 2 * 5);
+	// }
 
-	for(int i = 0; i < 20; i++){
-		append(&nums, f32(i) / 2 * 5);
-		printf("%f\n", nums[i]);
-	}
+	// for(int i = 0; i < 69; i++){
+	// 	printf("%f\n", nums[i]);
+	// }
 
-	String s = "Hellope, 世界";
-	for(rune r : s){
-		printf("U+%04x\n", r);
-	}
+	// printf(">>> %zu %zu\n", len(nums), cap(nums));
+
+	// String s = "Hellope, 世界";
+	// for(rune r : s){
+	// 	printf("U+%04x\n", r);
+	// }
 }
 
 
