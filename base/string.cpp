@@ -308,11 +308,14 @@ String str_trim_start(String s, String cutset){
 	u8 const* d = (u8 const*)raw_data(s);
 	usize n = len(s);
 	usize i = 0;
-	while(i < n){
+
+	for(i = 0; i < n; i += rd.size){
 		RuneDecoded rd = rune_decode(d + i, (u32)(n - i));
-		if(!rune_in_cutset(rd.codepoint, cs)){ break; }
-		i += rd.size;
+		if(!rune_in_cutset(rd.codepoint, cs)){
+			break;
+		}
 	}
+
 	return String{(char const*)d + i, n - i};
 }
 
