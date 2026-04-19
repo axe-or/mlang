@@ -286,6 +286,7 @@ static CutsetRunes decode_cutset(String cutset){
 	u8 const* d = (u8 const*)raw_data(cutset);
 	usize n = len(cutset);
 	usize i = 0;
+
 	while(i < n){
 		RuneDecoded rd = rune_decode(d + i, (u32)(n - i));
 		if(!append(&cs, rd.codepoint)){ break; }
@@ -309,62 +310,49 @@ String str_trim_start(String s, String cutset){
 	usize n = len(s);
 	usize i = 0;
 
-	for(i = 0; i < n; i += rd.size){
+	while(i < n){
 		RuneDecoded rd = rune_decode(d + i, (u32)(n - i));
 		if(!rune_in_cutset(rd.codepoint, cs)){
 			break;
 		}
+		i += rd.size;
 	}
 
 	return String{(char const*)d + i, n - i};
 }
 
+constexpr inline
+bool is_utf8_continuation_byte(u8 b){
+	return (b & 0xc0) == 0x80;
+}
+
 String str_trim_end(String s, String cutset){
 	CutsetRunes cs = decode_cutset(cutset);
-	u8 const* d = (u8 const*)raw_data(s);
+	u8 const* buf = (u8 const*)raw_data(s);
 	usize n = len(s);
+
 	while(n > 0){
 		usize start = n - 1;
-		while(start > 0 && ((d[start] & 0xc0) == 0x80)){ start--; }
-		RuneDecoded rd = rune_decode(d + start, (u32)(n - start));
-		if(!rune_in_cutset(rd.codepoint, cs)){ break; }
+		while(start > 0 && is_utf8_continuation_byte(buf[start])){
+			start -= 1;
+		}
+
+		RuneDecoded rd = rune_decode(buf + start, (u32)(n - start));
+		if(!rune_in_cutset(rd.codepoint, cs)){
+			break;
+		}
 		n = start;
 	}
-	return String{(char const*)d, n};
+
+	return String{(char const*)buf, n};
 }
 
 String str_trim(String s, String cutset){
 	return str_trim_end(str_trim_start(s, cutset), cutset);
 }
 
-static bool is_whitespace(rune r){
-	return r == ' ' || r == '\t' || r == '\n' || r == '\r' || r == '\f' || r == '\v';
-}
-
 String str_trim_spaces(String s){
-	u8 const* d = (u8 const*)raw_data(s);
-	usize n = len(s);
-	usize start = 0;
-
-	while(start < n){
-		RuneDecoded rd = rune_decode(d + start, (u32)(n - start));
-		if(!is_whitespace(rd.codepoint)){
-			break;
-		}
-		start += rd.size;
-	}
-	while(n > start){
-		usize rb = n - 1;
-		while(rb > start && ((d[rb] & 0xc0) == 0x80)){
-			rb--;
-		}
-		RuneDecoded rd = rune_decode(d + rb, (u32)(n - rb));
-		if(!is_whitespace(rd.codepoint)){
-			break;
-		}
-		n = rb;
-	}
-	return String{(char const*)d + start, n - start};
+	return str_trim(s, " \t\n\r\f\v");
 }
 
 Slice<String> str_split(String target, String sep, Allocator a){
