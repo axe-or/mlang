@@ -35,6 +35,11 @@ int main(){
 		append(&nums, f32(i) / 2 * 5);
 		printf("%f\n", nums[i]);
 	}
+
+	String s = "Hellope, 世界";
+	for(rune r : s){
+		printf("U+%04x\n", r);
+	}
 }
 
 

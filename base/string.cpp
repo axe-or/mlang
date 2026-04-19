@@ -1,5 +1,6 @@
 #include "base.hpp"
-#include "string_builder.hpp"
+#include "string.hpp"
+#include "static_array.hpp"
 #include "stb_sprintf.h"
 
 //// String
@@ -223,6 +224,203 @@ bool sb_write_rune(StringBuilder* sb, rune r){
 
 String sb_to_string(StringBuilder* sb){
 	return String{ (char const*)raw_data(sb->buf), len(sb->buf) };
+}
+
+//// String utilities
+
+String str_clone(String s, Allocator a){
+	usize n = len(s);
+	u8* buf = (u8*)mem_alloc(a, n, alignof(u8));
+	if(!buf){
+		return String{};
+	}
+
+	mem_copy_no_overlap(buf, raw_data(s), n);
+	return String{(char const*)buf, n};
+}
+
+i64 str_find(String haystack, String needle){
+	usize hay_len = len(haystack);
+	usize needle_len = len(needle);
+	if(needle_len == 0){
+		return 0;
+	}
+
+	if(needle_len > hay_len){
+		return -1;
+	}
+
+	char const* hay_buf = raw_data(haystack);
+	char const* needle_buf = raw_data(needle);
+
+	for(usize i = 0; i <= (hay_len - needle_len); i++){
+		if(mem_compare(&hay_buf[i], needle_buf, needle_len) == 0){
+			return (i64)i;
+		}
+	}
+
+	return -1;
+}
+
+String str_trim_prefix(String s, String prefix){
+	usize plen = len(prefix);
+	if(len(s) >= plen && mem_compare(raw_data(s), raw_data(prefix), plen) == 0){
+		return String{raw_data(s) + plen, len(s) - plen};
+	}
+	return s;
+}
+
+String str_trim_suffix(String s, String suffix){
+	usize slen  = len(s);
+	usize sflen = len(suffix);
+	if(slen >= sflen && mem_compare(raw_data(s) + slen - sflen, raw_data(suffix), sflen) == 0){
+		return String{raw_data(s), slen - sflen};
+	}
+	return s;
+}
+
+using CutsetRunes = StaticArray<rune, max_cutset_rune_count>;
+
+static CutsetRunes decode_cutset(String cutset){
+	CutsetRunes cs;
+	u8 const* d = (u8 const*)raw_data(cutset);
+	usize n = len(cutset);
+	usize i = 0;
+	while(i < n){
+		RuneDecoded rd = rune_decode(d + i, (u32)(n - i));
+		if(!append(&cs, rd.codepoint)){ break; }
+		i += rd.size ? rd.size : 1;
+	}
+	return cs;
+}
+
+static bool rune_in_cutset(rune r, CutsetRunes const& cs){
+	for(usize i = 0; i < len(cs); i++){
+		if(raw_data(cs)[i] == r){ return true; }
+	}
+	return false;
+}
+
+String str_trim_start(String s, String cutset){
+	CutsetRunes cs = decode_cutset(cutset);
+	u8 const* d = (u8 const*)raw_data(s);
+	usize n = len(s);
+	usize i = 0;
+	while(i < n){
+		RuneDecoded rd = rune_decode(d + i, (u32)(n - i));
+		if(!rune_in_cutset(rd.codepoint, cs)){ break; }
+		i += rd.size;
+	}
+	return String{(char const*)d + i, n - i};
+}
+
+String str_trim_end(String s, String cutset){
+	CutsetRunes cs = decode_cutset(cutset);
+	u8 const* d = (u8 const*)raw_data(s);
+	usize n = len(s);
+	while(n > 0){
+		usize start = n - 1;
+		while(start > 0 && ((d[start] & 0xc0) == 0x80)){ start--; }
+		RuneDecoded rd = rune_decode(d + start, (u32)(n - start));
+		if(!rune_in_cutset(rd.codepoint, cs)){ break; }
+		n = start;
+	}
+	return String{(char const*)d, n};
+}
+
+String str_trim(String s, String cutset){
+	return str_trim_end(str_trim_start(s, cutset), cutset);
+}
+
+static bool is_whitespace(rune r){
+	return r == ' ' || r == '\t' || r == '\n' || r == '\r' || r == '\f' || r == '\v';
+}
+
+String str_trim_spaces(String s){
+	u8 const* d = (u8 const*)raw_data(s);
+	usize n = len(s);
+	usize start = 0;
+
+	while(start < n){
+		RuneDecoded rd = rune_decode(d + start, (u32)(n - start));
+		if(!is_whitespace(rd.codepoint)){
+			break;
+		}
+		start += rd.size;
+	}
+	while(n > start){
+		usize rb = n - 1;
+		while(rb > start && ((d[rb] & 0xc0) == 0x80)){
+			rb--;
+		}
+		RuneDecoded rd = rune_decode(d + rb, (u32)(n - rb));
+		if(!is_whitespace(rd.codepoint)){
+			break;
+		}
+		n = rb;
+	}
+	return String{(char const*)d + start, n - start};
+}
+
+Slice<String> str_split(String target, String sep, Allocator a){
+	DynArray<String> parts(a);
+	usize sep_len = len(sep);
+
+	if(sep_len == 0){
+		append(&parts, target);
+		return slice(parts);
+	}
+
+	char const* d = raw_data(target);
+	usize target_len = len(target);
+	usize start = 0;
+
+	while(start <= target_len){
+		String remaining{d + start, target_len - start};
+		i64 pos = str_find(remaining, sep);
+		if(pos < 0){
+			append(&parts, remaining);
+			break;
+		}
+		append(&parts, String{d + start, (usize)pos});
+		start += (usize)pos + sep_len;
+	}
+
+	return slice(parts);
+}
+
+String str_replace(String s, String pattern, String replacement, Allocator a, usize count){
+	StringBuilder sb = sb_create(a);
+	usize plen = len(pattern);
+
+	if(plen == 0){
+		sb_write_string(&sb, s);
+		return sb_to_string(&sb);
+	}
+
+	char const* d = raw_data(s);
+	usize slen = len(s);
+	usize start = 0;
+	usize replaced = 0;
+
+	while(start <= slen){
+		if(count != 0 && replaced >= count){
+			sb_write_string(&sb, String{d + start, slen - start});
+			break;
+		}
+		String remaining{d + start, slen - start};
+		i64 pos = str_find(remaining, pattern);
+		if(pos < 0){
+			sb_write_string(&sb, remaining);
+			break;
+		}
+		sb_write_string(&sb, String{d + start, (usize)pos});
+		sb_write_string(&sb, replacement);
+		start += (usize)pos + plen;
+		replaced++;
+	}
+
+	return sb_to_string(&sb);
 }
 
 String sb_build(StringBuilder const& sb, Allocator a){

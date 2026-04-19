@@ -210,27 +210,7 @@ Slice<T> copy(Slice<T> dst, Slice<T> src){
 	return Slice<T>{raw_data(dst), n};
 }
 
-//// String
-struct String {
-private:
-	char const* _data;
-	usize _len;
-
-public:
-	constexpr
-	String() : _data{nullptr}, _len{0} {}
-
-	constexpr
-	String(char const* s) : _data{s}, _len{cstring_len(s)} {}
-
-	explicit constexpr
-	String(char const* s, usize n) : _data{s}, _len{n} {}
-
-	friend attribute_force_inline constexpr usize       len(String s)      { return s._len; }
-	friend attribute_force_inline constexpr char const* raw_data(String s) { return s._data; }
-};
-
-
+//// UTF-8
 // The error unicode codepoint
 constexpr rune rune_error = 0xfffd;
 
@@ -252,4 +232,124 @@ RuneEncoded rune_encode(rune r);
 // Decode the first rune of a UTF-8 encoded buffer
 RuneDecoded rune_decode(u8 const* buf, u32 buflen);
 
+
+
+//// String
+
+// Simple UTF-8 iterator. This is ugly but required to use for(rune c : s){} syntax
+struct UTF8Iterator {
+	u8 const* _data;
+	usize _len;
+	usize _pos;
+
+	rune _current;
+	u32 _size;
+
+	rune operator*() const { return _current; }
+
+	UTF8Iterator& operator++(){
+		_pos += _size;
+		if(_pos < _len){
+			RuneDecoded rd = rune_decode(_data + _pos, (u32)(_len - _pos));
+			_current = rd.codepoint;
+			_size    = rd.size;
+		} else {
+			_current = 0;
+			_size    = 0;
+		}
+		return *this;
+	}
+
+	bool operator!=(UTF8Iterator const& o) const { return _pos != o._pos; }
+};
+
+Pair<rune, bool> next(UTF8Iterator* it){
+	if(it->_pos >= it->_len){
+		return {0, false};
+	}
+	Pair<rune, bool> result = {it->_current, true};
+	++(*it);
+	return result;
+}
+
+void utf8_iter_init(UTF8Iterator* it, u8 const* data, usize len){
+	it->_data = data;
+	it->_len  = len;
+	it->_pos  = 0;
+
+	if(it->_len > 0){
+		RuneDecoded rd = rune_decode(it->_data, (u32)it->_len);
+		it->_current = rd.codepoint;
+		it->_size    = rd.size;
+	} else {
+		it->_current = 0;
+		it->_size    = 0;
+	}
+}
+
+struct UTF8RevIterator {
+	u8 const* _data;
+	usize     _pos;
+};
+
+void str_rev_iter_init(UTF8RevIterator* it, u8 const* data, usize len){
+	it->_data = data;
+	it->_pos  = len;
+}
+
+Pair<rune, bool> next(UTF8RevIterator* it){
+	if(it->_pos == 0){
+		return {0, false};
+	}
+
+	usize start = it->_pos - 1;
+	while(start > 0 && ((it->_data[start] & 0xc0) == 0x80)){
+		start -= 1;
+	}
+
+	RuneDecoded rd = rune_decode(it->_data + start, (u32)(it->_pos - start));
+	it->_pos = start;
+
+	return {rd.codepoint, true};
+}
+
+struct String {
+private:
+	char const* _data;
+	usize _len;
+
+public:
+	constexpr
+	String() : _data{nullptr}, _len{0} {}
+
+	constexpr
+	String(char const* s) : _data{s}, _len{cstring_len(s)} {}
+
+	explicit constexpr
+	String(char const* s, usize n) : _data{s}, _len{n} {}
+
+	UTF8Iterator begin(){
+		UTF8Iterator it = {};
+		utf8_iter_init(&it, (u8 const*)_data, _len);
+		return it;
+	}
+
+	UTF8Iterator end(){
+		// TODO: Use Init here
+		return UTF8Iterator{ (u8 const*)_data, _len, _len, 0, 0 };
+	}
+
+	friend attribute_force_inline constexpr usize       len(String s)      { return s._len; }
+	friend attribute_force_inline constexpr char const* raw_data(String s) { return s._data; }
+};
+
+inline UTF8Iterator str_iterator(String s){
+	return s.begin();
+}
+
+inline UTF8RevIterator str_rev_iterator(String s){
+	UTF8RevIterator it;
+	str_rev_iter_init(&it, (u8 const*)raw_data(s), len(s));
+	return it;
+}
 
