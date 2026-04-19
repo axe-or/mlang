@@ -8,4 +8,11 @@ void* operator new (size_t, void* p, Nat){ return p; }
 	#include "virtual_windows.cpp"
 #elif defined(BUILD_PLATFORM_LINUX)
 	#include "virtual_linux.cpp"
+	#include "heap_linux.cpp"
+#endif
+
+#if defined(BUILD_USE_MIMALLOC)
+	#include "mi_allocator.cpp"
+#else
+	/* TODO: heap_allocator() */
 #endif

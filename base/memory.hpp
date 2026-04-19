@@ -113,6 +113,12 @@ u8 mem_query(Allocator a){
 	return a._fn(a._impl, Mem_Query, NULL, 0, 0, 0, 0).modes;
 }
 
+Allocator null_allocator();
+
+Allocator panic_allocator();
+
+Allocator heap_allocator();
+
 template<typename T>
 T* make(Allocator a){
 	T* p = (T*)mem_alloc(a, sizeof(T), alignof(T));

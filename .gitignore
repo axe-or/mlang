@@ -3,4 +3,12 @@
 *.pdb
 *.obj
 *.rdi
+*.dll
+*.lib
+*.o
+*.so
+*.a
+*.dylib
+*.exp
 .claude
+vendor

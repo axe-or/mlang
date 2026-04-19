@@ -25,11 +25,11 @@ void ensure(bool predicate, cstring msg, sourcelocation loc) {
 }
 
 int main(){
-	virtual_init();
-	auto arena = arena_from_virtual(512 * mem_megabyte);
-	auto allocator = arena_allocator(&arena);
+	// virtual_init();
+	// auto arena = arena_from_virtual(512 * mem_megabyte);
+	// auto allocator = arena_allocator(&arena);
 
-	auto nums = make_dyn_array<f32>(allocator);
+	auto nums = make_dyn_array<f32>(heap_allocator());
 
 	for(int i = 0; i < 20; i++){
 		append(&nums, f32(i) / 2 * 5);

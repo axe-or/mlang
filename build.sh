@@ -1,10 +1,14 @@
 #!/usr/bin/env sh
 
+# TODO: Separate mimalloc build
+
 cc='clang++'
 cflags='-std=c++20 -fno-strict-aliasing -fno-exceptions -fno-rtti -nodefaultlibs'
-ldflags='-lc'
+
+incflags='-I. -I./vendor/mimalloc/include'
+ldflags='-L. -lc -fuse-ld=mold'
 optflags='-O0 -g'
-warnings='-Wall -Wextra -Werror=return-type'
+wflags='-Wall -Wextra -Werror=return-type'
 
 Run(){ echo "-> $@"; $@; }
 
@@ -16,5 +20,5 @@ case $mode in
 	*) ;;
 esac
 
-Run $cc $cflags $optflags $warnings main.cpp -o main.exe $ldflags
+Run $cc $cflags $incflags $optflags $wflags main.cpp -o main.exe $ldflags
 
