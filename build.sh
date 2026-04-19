@@ -1,7 +1,8 @@
 #!/usr/bin/env sh
 
 cc='clang++'
-cflags='-std=c++20 -fno-strict-aliasing -fno-exceptions -fno-rtti'
+cflags='-std=c++20 -fno-strict-aliasing -fno-exceptions -fno-rtti -nodefaultlibs'
+ldflags='-lc'
 optflags='-O0 -g'
 warnings='-Wall -Wextra -Werror=return-type'
 
@@ -15,5 +16,5 @@ case $mode in
 	*) ;;
 esac
 
-Run $cc $cflags $optflags $warnings main.cpp -o main.exe
+Run $cc $cflags $optflags $warnings main.cpp -o main.exe $ldflags
 

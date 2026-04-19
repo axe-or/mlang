@@ -35,14 +35,11 @@ int main(){
 		append(&nums, f32(i) / 2 * 5);
 		printf("%f\n", nums[i]);
 	}
-
-	slice(nums, 7, 21);
-
-	printf("srcloc: %zu\n", sizeof(sourcelocation));
 }
 
 
 #include "base/base.cpp"
+#include "libcpp_shim.cpp"
 // TODO: Get rid of this
 #define STB_SPRINTF_IMPLEMENTATION
 #include "stb_sprintf.h"
