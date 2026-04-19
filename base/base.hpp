@@ -341,6 +341,24 @@ public:
 
 	friend attribute_force_inline constexpr usize       len(String s)      { return s._len; }
 	friend attribute_force_inline constexpr char const* raw_data(String s) { return s._data; }
+
+	[[nodiscard]] friend attribute_force_inline
+	String take(String s, usize n, sourcelocation loc = sourcelocation::current()){
+		ensure(n <= s._len, "cannot take more than length", loc);
+		return String{s._data, n};
+	}
+
+	[[nodiscard]] friend attribute_force_inline
+	String skip(String s, usize n, sourcelocation loc = sourcelocation::current()){
+		ensure(n <= s._len, "cannot skip more than length", loc);
+		return String{s._data + n, s._len - n};
+	}
+
+	[[nodiscard]] friend attribute_force_inline
+	String slice(String s, usize start, usize end, sourcelocation loc = sourcelocation::current()){
+		ensure(end <= s._len && start <= end, "invalid slice indexes", loc);
+		return String{s._data + start, end - start};
+	}
 };
 
 inline UTF8Iterator str_iterator(String s){

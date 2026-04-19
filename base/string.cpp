@@ -208,7 +208,7 @@ bool sb_write_bytes(StringBuilder* sb, Slice<u8> data){
 bool sb_write_string(StringBuilder* sb, String s){
 	usize n = len(s);
 	if(!sb_grow(sb, n)){ return false; }
-	for(usize i = 0; i < n; i++){
+	for(usize i = 0; i < n; i += 1){
 		append(&sb->buf, (u8)raw_data(s)[i]);
 	}
 	return true;
@@ -216,7 +216,7 @@ bool sb_write_string(StringBuilder* sb, String s){
 
 bool sb_write_rune(StringBuilder* sb, rune r){
 	RuneEncoded enc = rune_encode(r);
-	for(u32 i = 0; i < enc.size; i++){
+	for(u32 i = 0; i < enc.size; i += 1){
 		if(!append(&sb->buf, enc.bytes[i])){ return false; }
 	}
 	return true;
@@ -253,7 +253,7 @@ i64 str_find(String haystack, String needle){
 	char const* hay_buf = raw_data(haystack);
 	char const* needle_buf = raw_data(needle);
 
-	for(usize i = 0; i <= (hay_len - needle_len); i++){
+	for(usize i = 0; i <= (hay_len - needle_len); i += 1){
 		if(mem_compare(&hay_buf[i], needle_buf, needle_len) == 0){
 			return (i64)i;
 		}
@@ -295,8 +295,10 @@ static CutsetRunes decode_cutset(String cutset){
 }
 
 static bool rune_in_cutset(rune r, CutsetRunes const& cs){
-	for(usize i = 0; i < len(cs); i++){
-		if(raw_data(cs)[i] == r){ return true; }
+	for(usize i = 0; i < len(cs); i += 1){
+		if(raw_data(cs)[i] == r){
+			return true;
+		}
 	}
 	return false;
 }
@@ -391,33 +393,31 @@ Slice<String> str_split(String target, String sep, Allocator a){
 
 String str_replace(String s, String pattern, String replacement, Allocator a, usize count){
 	StringBuilder sb = sb_create(a);
-	usize plen = len(pattern);
 
-	if(plen == 0){
+	if(len(pattern) == 0){
 		sb_write_string(&sb, s);
 		return sb_to_string(&sb);
 	}
 
-	char const* d = raw_data(s);
-	usize slen = len(s);
-	usize start = 0;
+	String remaining = s;
 	usize replaced = 0;
 
-	while(start <= slen){
+	while(len(remaining) > 0){
 		if(count != 0 && replaced >= count){
-			sb_write_string(&sb, String{d + start, slen - start});
+			sb_write_string(&sb, remaining);
 			break;
 		}
-		String remaining{d + start, slen - start};
 		i64 pos = str_find(remaining, pattern);
 		if(pos < 0){
 			sb_write_string(&sb, remaining);
 			break;
 		}
-		sb_write_string(&sb, String{d + start, (usize)pos});
+
+		String matching =  take(remaining, (usize)pos);
+		sb_write_string(&sb, matching);
 		sb_write_string(&sb, replacement);
-		start += (usize)pos + plen;
-		replaced++;
+		remaining = skip(remaining, (usize)pos + len(pattern));
+		replaced += 1;
 	}
 
 	return sb_to_string(&sb);
