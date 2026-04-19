@@ -313,6 +313,8 @@ Pair<rune, bool> next(UTF8RevIterator* it){
 	return {rd.codepoint, true};
 }
 
+extern "C" int memcmp(void const*, void const*, size_t);
+
 struct String {
 private:
 	char const* _data;
@@ -333,7 +335,7 @@ public:
 		if(o._len != _len){
 			return false;
 		}
-		return mem_compare(_data, o._data, _len) == 0;
+		return memcmp(_data, o._data, _len) == 0;
 	}
 
 	constexpr
