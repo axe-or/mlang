@@ -364,18 +364,17 @@ Slice<String> str_split(String target, String sep, Allocator a){
 		return slice(parts);
 	}
 
-	char const* d = raw_data(target);
 	usize target_len = len(target);
 	usize start = 0;
 
 	while(start <= target_len){
-		String remaining{d + start, target_len - start};
+		String remaining = skip(target, start);
 		i64 pos = str_find(remaining, sep);
 		if(pos < 0){
 			append(&parts, remaining);
 			break;
 		}
-		append(&parts, String{d + start, (usize)pos});
+		append(&parts, slice(target, start, pos));
 		start += (usize)pos + sep_len;
 	}
 

@@ -328,6 +328,29 @@ public:
 	explicit constexpr
 	String(char const* s, usize n) : _data{s}, _len{n} {}
 
+	constexpr
+	bool operator==(String o){
+		if(o._len != _len){
+			return false;
+		}
+		return mem_compare(_data, o._data, _len) == 0;
+	}
+
+	constexpr
+	bool operator!=(String o){
+		if(o._len != _len){
+			return false;
+		}
+
+		for(usize i = 0; i < _len; i += 1){
+			if(o._data[i] != _data[i]){
+				return false;
+			}
+		}
+
+		return true;
+	}
+
 	UTF8Iterator begin(){
 		UTF8Iterator it = {};
 		utf8_iter_init(&it, (u8 const*)_data, _len);
