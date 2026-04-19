@@ -211,7 +211,7 @@ void arena_destroy(Arena* a){
 static
 AllocatorResult arena_allocator_func(
 	void* impl,
-	u8 mode,
+	AllocatorMode mode,
 	void* ptr,
 	usize old_size, usize old_align, /* Old layout */
 	usize new_size, usize new_align /* New Layout */

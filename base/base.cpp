@@ -1,5 +1,6 @@
 #include "string.cpp"
 #include "arena.cpp"
+#include "error_allocator.cpp"
 
 void* operator new (size_t, void* p, Nat){ return p; }
 

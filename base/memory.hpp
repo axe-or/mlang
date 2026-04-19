@@ -77,7 +77,7 @@ union AllocatorResult {
 };
 
 using AllocatorFunc = AllocatorResult (*)(
-	void* impl, u8 mode,
+	void* impl, AllocatorMode mode,
 	void* ptr,
 	usize old_size, usize old_align, /* Old layout */
 	usize new_size, usize new_align /* New Layout */
