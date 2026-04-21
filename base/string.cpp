@@ -153,77 +153,62 @@ String buffer_printf(u8* buf, usize bufsize, char const* fmt, ...) {
 	return res;
 }
 
-// // TODO: Ensure arena has at LEAST `fmt` bytes committed and preferrably `fmt * 2` bytes
-// String arena_vprintf(Arena* arena, char const* fmt, va_list args){
-// 	u8* base = (u8*)((uintptr)arena->data + arena->offset);
-// 	usize size = arena->commited - arena->offset;
-// 	if(!size){
-// 		return String{};
-// 	}
-
-// 	String res = buffer_vprintf(base, size, fmt, args);
-// 	arena->offset += res.len();
-
-// 	return res;
-// }
-
-// String arena_printf(Arena* arena, char const* fmt, ...){
-// 	va_list args;
-// 	va_start(args, fmt);
-// 	String res = arena_vprintf(arena, fmt, args);
-// 	va_end(args);
-// 	return res;
-// }
-
 //// String Builder
 
-StringBuilder sb_create(Allocator a){
-	return StringBuilder{ DynArray<u8>{a} };
+// Helpers: inside member functions whose names match DynArray friend functions,
+// ADL is suppressed. Static helpers restore correct lookup.
+static void buf_destroy(DynArray<u8>* b){ destroy(b); }
+static void buf_clear(DynArray<u8>* b){ clear(b); }
+
+void StringBuilder::destroy(){
+	buf_destroy(&buf);
 }
 
-void sb_destroy(StringBuilder* sb){
-	destroy(&sb->buf);
+void StringBuilder::reset(){
+	buf_clear(&buf);
 }
 
-void sb_reset(StringBuilder* sb){
-	clear(&sb->buf);
-}
-
-bool sb_grow(StringBuilder* sb, usize n){
-	usize needed = len(sb->buf) + n;
-	if(needed <= cap(sb->buf)){
+bool StringBuilder::grow(usize n){
+	usize needed = len(buf) + n;
+	if(needed <= cap(buf)){
 		return true;
 	}
-	return resize(&sb->buf, needed);
+	return resize(&buf, needed);
 }
 
-bool sb_write_byte(StringBuilder* sb, u8 b){
-	return append(&sb->buf, b);
+bool StringBuilder::write_byte(u8 b){
+	return append(&buf, b);
 }
 
-bool sb_write_bytes(StringBuilder* sb, Slice<u8> data){
-	return append_slice(&sb->buf, data);
+bool StringBuilder::write_bytes(Slice<u8> data){
+	return append_slice(&buf, data);
 }
 
-bool sb_write_string(StringBuilder* sb, String s){
+bool StringBuilder::write_string(String s){
 	usize n = len(s);
-	if(!sb_grow(sb, n)){ return false; }
+	if(!grow(n)){ return false; }
 	for(usize i = 0; i < n; i += 1){
-		append(&sb->buf, (u8)raw_data(s)[i]);
+		append(&buf, (u8)raw_data(s)[i]);
 	}
 	return true;
 }
 
-bool sb_write_rune(StringBuilder* sb, rune r){
+bool StringBuilder::write_rune(rune r){
 	RuneEncoded enc = rune_encode(r);
 	for(u32 i = 0; i < enc.size; i += 1){
-		if(!append(&sb->buf, enc.bytes[i])){ return false; }
+		if(!append(&buf, enc.bytes[i])){ return false; }
 	}
 	return true;
 }
 
-String sb_to_string(StringBuilder* sb){
-	return String{ (char const*)raw_data(sb->buf), len(sb->buf) };
+String StringBuilder::to_string() const {
+	return String{ (char const*)raw_data(buf), len(buf) };
+}
+
+String StringBuilder::build(Allocator a) const {
+	auto b = make_slice<u8>(a, len(buf) + 1);
+	copy(b, slice(buf));
+	return String{(char const*)raw_data(b), len(buf)};
 }
 
 //// String utilities
@@ -383,11 +368,11 @@ Slice<String> str_split(String target, String sep, Allocator a){
 }
 
 String str_replace(String s, String pattern, String replacement, Allocator a, usize count){
-	StringBuilder sb = sb_create(a);
+	StringBuilder sb{a};
 
 	if(len(pattern) == 0){
-		sb_write_string(&sb, s);
-		return sb_to_string(&sb);
+		sb.write_string(s);
+		return sb.to_string();
 	}
 
 	String remaining = s;
@@ -395,27 +380,21 @@ String str_replace(String s, String pattern, String replacement, Allocator a, us
 
 	while(len(remaining) > 0){
 		if(count != 0 && replaced >= count){
-			sb_write_string(&sb, remaining);
+			sb.write_string(remaining);
 			break;
 		}
 		i64 pos = str_find(remaining, pattern);
 		if(pos < 0){
-			sb_write_string(&sb, remaining);
+			sb.write_string(remaining);
 			break;
 		}
 
 		String matching =  take(remaining, (usize)pos);
-		sb_write_string(&sb, matching);
-		sb_write_string(&sb, replacement);
+		sb.write_string(matching);
+		sb.write_string(replacement);
 		remaining = skip(remaining, (usize)pos + len(pattern));
 		replaced += 1;
 	}
 
-	return sb_to_string(&sb);
-}
-
-String sb_build(StringBuilder const& sb, Allocator a){
-	auto buf = make_slice<u8>(a, len(sb) + 1);
-	copy(buf, slice(sb.buf));
-	return String{(char const*)raw_data(buf), len(buf)};
+	return sb.to_string();
 }

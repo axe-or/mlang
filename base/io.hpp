@@ -25,19 +25,19 @@ using StreamFunc = i64 (*)(
 struct Stream {
 	StreamFunc _fn;
 	void* _data;
+
+	attribute_force_inline
+	i64 read(Slice<u8> buf, i64 offset, StreamSeek seek = Seek_Current){
+		return _fn(_data, Stream_Read, buf, offset, seek);
+	}
+
+	attribute_force_inline
+	i64 write(Slice<u8> buf, i64 offset, StreamSeek seek = Seek_Current){
+		return _fn(_data, Stream_Write, buf, offset, seek);
+	}
+
+	attribute_force_inline
+	u8 query(){
+		return (u8)_fn(_data, Stream_Query, {}, 0, (StreamSeek)0);
+	}
 };
-
-attribute_force_inline static
-i64 io_read(Stream* s, Slice<u8> buf, i64 offset, StreamSeek seek = Seek_Current){
-	return s->_fn(s->_data, Stream_Read, buf, offset, seek);
-}
-
-attribute_force_inline static
-i64 io_write(Stream* s, Slice<u8> buf, i64 offset, StreamSeek seek = Seek_Current){
-	return s->_fn(s->_data, Stream_Write, buf, offset, seek);
-}
-
-attribute_force_inline static
-u8 io_query(Stream* s){
-	return (u8)s->_fn(s->_data, Stream_Query, {}, 0, (StreamSeek)0);
-}

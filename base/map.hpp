@@ -40,7 +40,9 @@ struct Map {
 	Allocator allocator;
 	usize elem_count;
 
-	friend MapSlot<K, V>* get(Map<K, V, H>* map, K const& key){
+	MapSlot<K, V>* get(K const& key){
+		auto& m = *this;
+
 		u64 pos = H(&key) % len(map->slots);
 		
 		auto start_slot = &map->slots[pos];
@@ -58,10 +60,5 @@ struct Map {
 		return nullptr;
 	}
 };
-
-template<typename K, typename V, MapHash H = map_default_hash<K>>
-Map<K,V,H> make_map(Allocator a, usize capacity){
-
-}
 
 

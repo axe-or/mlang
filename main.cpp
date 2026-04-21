@@ -9,7 +9,7 @@ extern "C" int printf(cstring, ...);
 
 int main(){
 	virtual_init();
-	auto allocator = heap_allocator();
+	auto allocator = Arena::from_virtual(2 * mem_gigabyte);
 
 
 

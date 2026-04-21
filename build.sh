@@ -23,13 +23,13 @@ case $mode in
 	*) echo "Unknown mode: $mode"; exit 1 ;;
 esac
 
-use_mimalloc=0
+use_mimalloc=1
 use_static=0
 
 for arg in "$@"; do
 	case $arg in
-		"-mimalloc") use_mimalloc=1 ;;
-		"-static")   use_static=1 ;;
+		"-no-mimalloc") use_mimalloc=0 ;;
+		"-static")      use_static=1 ;;
 		*) echo "Unknown option: $arg"; exit 1 ;;
 	esac
 done

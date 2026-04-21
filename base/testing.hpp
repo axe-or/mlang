@@ -34,13 +34,13 @@ struct TestRunner {
 Arena* tests_get_arena(){
 	static Arena a{};
 	if(!a.data){
-		a = arena_from_virtual(64 * mem_megabyte, 1 * mem_megabyte);
+		a = Arena::from_virtual(64 * mem_megabyte, 1 * mem_megabyte);
 	}
 	return &a;
 }
 
 TestRunner* tests_create(){
-	auto a = arena_allocator(tests_get_arena());
+	auto a = tests_get_arena()->allocator();
 	auto runner = make<TestRunner>(a);
 	runner->tests = make_dyn_array<Test>(a);
 	return runner;
@@ -91,7 +91,7 @@ void tests_add(TestRunner* r, TestFunc func){
 		.total = 0,
 		.failed = 0,
 		.func = func,
-		.messages = make_dyn_array<TestMessage>(arena_allocator(tests_get_arena())),
+		.messages = make_dyn_array<TestMessage>(tests_get_arena()->allocator()),
 	};
 	append(&r->tests, t);
 }
