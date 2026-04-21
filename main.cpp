@@ -3,11 +3,16 @@
 #include "base/virtual.hpp"
 #include "base/dyn_array.hpp"
 #include "base/arena.hpp"
+#include "base/map.hpp"
 
 extern "C" int printf(cstring, ...);
 
 int main(){
 	virtual_init();
+	auto allocator = heap_allocator();
+
+
+
 }
 
 //// Single library TU
