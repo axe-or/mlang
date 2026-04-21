@@ -114,11 +114,33 @@ struct Nat {};
 void* operator new (size_t, void*, Nat);
 
 // Helpers that use preprocessor expansion tricks to "glue" identifiers
-#define ident_concat0(x, y) x##y
-#define ident_concat1(x, y) ident_concat0(x, y)
-#define ident_concat2(x, y) ident_concat1(x, y)
-#define ident_concat(x, y)  ident_concat2(x, y)
-#define ident_counter(x)    ident_concat(x, __COUNTER__)
+#define preproc_ident_concat0(x, y) x##y
+#define preproc_ident_concat1(x, y) preproc_ident_concat0(x, y)
+#define preproc_ident_concat2(x, y) preproc_ident_concat1(x, y)
+#define preproc_ident_concat(x, y)  preproc_ident_concat2(x, y)
+#define preproc_ident_counter(x)    preproc_ident_concat(x, __COUNTER__)
+
+//// Defer
+
+namespace defer_detail {
+template<typename F>
+struct DeferredCall {
+	F f;
+
+	attribute_force_inline constexpr
+	DeferredCall(F&& f) : f{static_cast<F&&>(f)} {}
+
+	attribute_force_inline constexpr
+	~DeferredCall() { f(); }
+};
+
+template<typename F>
+DeferredCall<F> make_deferred(F&& f){
+	return DeferredCall<F>(static_cast<F&&>(f));
+}
+}
+
+#define defer(stmt) auto preproc_ident_counter(_defer) = ::defer_detail::make_deferred([&](){ do { stmt ; } while(0); });
 
 //// Assertions
 

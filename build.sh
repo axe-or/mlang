@@ -13,12 +13,13 @@ Run(){ echo "-> $@"; $@; }
 
 set -eu
 
-mode="${1:?Usage: build.sh [debug|release] <options...>}"
+mode="${1:?Usage: build.sh [debug|release|test] <options...>}"
 shift
 
 case $mode in
 	"debug")   optflags='-O0 -g' ;;
 	"release") optflags='-O2' ;;
+	"test")    optflags='-Os -g' ;;
 	*) echo "Unknown mode: $mode"; exit 1 ;;
 esac
 
@@ -43,5 +44,9 @@ if [ $use_static -eq 1 ]; then
 	ldflags="$ldflags -static"
 fi
 
-Run $cc $cflags $incflags $optflags $wflags main.cpp -o main.exe $ldflags
+if [ "$mode" = "test" ]; then
+	Run $cc $cflags $incflags $optflags $wflags testmain.cpp -o test.exe $ldflags
+else
+	Run $cc $cflags $incflags $optflags $wflags main.cpp -o main.exe $ldflags
+fi
 

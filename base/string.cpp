@@ -375,7 +375,7 @@ Slice<String> str_split(String target, String sep, Allocator a){
 			append(&parts, remaining);
 			break;
 		}
-		append(&parts, slice(target, start, pos));
+		append(&parts, slice(target, start, start + (usize)pos));
 		start += (usize)pos + sep_len;
 	}
 

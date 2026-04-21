@@ -1,4 +1,10 @@
+#pragma once
 #include "base.hpp"
+#include "memory.hpp"
+#include "dyn_array.hpp"
+#include "arena.hpp"
+
+extern "C" int printf(const char*, ...);
 
 struct TestRunner;
 struct Test;
@@ -40,23 +46,28 @@ TestRunner* tests_create(){
 	return runner;
 }
 
-void tests_run(TestRunner* r){
+bool tests_run(TestRunner* r){
+	bool all_ok = true;
 	for(usize i = 0; i < len(r->tests); i++){
 		auto test = &r->tests[i];
 		test->func(test);
 
+		if(test->failed > 0){
+			all_ok = false;
+		}
+
 		if(len(test->name)){
 			printf(
-				"[%.*s %s]\n",
-				int(len(test->name)), raw_data(test->name),
-				test->failed == 0 ? "PASS" : "FAIL"
+				"%s: %.*s\n",
+				test->failed == 0 ? "PASS" : "FAIL",
+				int(len(test->name)), raw_data(test->name)
 			);
 		}
 		else {
 			printf(
-				"[<unnamed test #%d> %s]\n",
-				int(i),
-				test->failed == 0 ? "PASS" : "FAIL"
+				"%s: <unnamed test #%d\n",
+				test->failed == 0 ? "PASS" : "FAIL",
+				int(i)
 			);
 		}
 
@@ -69,6 +80,7 @@ void tests_run(TestRunner* r){
 			);
 		}
 	}
+	return all_ok;
 }
 
 void tests_add(TestRunner* r, TestFunc func){
