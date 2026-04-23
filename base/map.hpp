@@ -31,34 +31,24 @@ template<typename K, typename V>
 struct MapSlot {
 	K key;
 	V val;
-	MapSlot<K, V>* next; // Pointed to itself do indicate end of list. Points to NULL to indicate slot vacancy
+	MapSlot<K, V>* next;
 };
 
 template<typename K, typename V, MapHash H = map_default_hash<K>>
 struct Map {
-	Slice<MapSlot<K, V>> slots;
-	Allocator allocator;
-	usize elem_count;
+	// Slice<MapSlot<K, V>> slots;
+	// Allocator allocator;
+	// usize elem_count;
 
-	MapSlot<K, V>* get(K const& key){
-		auto& m = *this;
+	// MapSlot<K, V>* get(K const& key){
+	// 	return nullptr;
+	// }
 
-		u64 pos = H(&key) % len(map->slots);
-		
-		auto start_slot = &map->slots[pos];
-
-		if(start_slot->next == nullptr){
-			return nullptr;
-		}
-
-		for(auto slot = start_slot; slot->next != start_slot; slot = slot->next){
-			if(slot->key == key){
-				return slot;
-			}
-		}
-
-		return nullptr;
-	}
+	// static
+	// Map<K,V,H> create(Allocator a, usize n){
+	// 	auto slot_data = make_slice<MapSlot<K, V>>(a, n);
+	// 	auto slots = make_slice<MapSlot<K, V>*>(a, n);
+	// }
 };
 
 
