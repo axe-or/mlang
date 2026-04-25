@@ -188,9 +188,9 @@ public:
 		return _data[idx];
 	}
 
-	Slice<T>(): _data{nullptr}, _len{0} {}
+	Slice(): _data{nullptr}, _len{0} {}
 
-	Slice<T>(T* data, usize len): _data{data}, _len{len} {}
+	Slice(T* data, usize len): _data{data}, _len{len} {}
 
 	friend attribute_force_inline constexpr
 	usize len(Slice<T> s){ return s._len; }

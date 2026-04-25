@@ -18,9 +18,7 @@ u64 fnv64a(Slice<u8> b){
 }
 
 template<typename T>
-u64 map_default_hash(T const* k){
-	return fnv64a(Slice<u8>{(u8*)k, sizeof(T)});
-}
+u64 map_default_hash(T const* k) = delete;
 
 template<>
 inline u64 map_default_hash<String>(String const* k){
@@ -34,7 +32,7 @@ struct MapSlot {
 	MapSlot<K, V>* next;
 };
 
-template<typename K, typename V, MapHash H = map_default_hash<K>>
+template<typename K, typename V, MapHash<K> H = map_default_hash<K>>
 struct Map {
 	// Slice<MapSlot<K, V>> slots;
 	// Allocator allocator;

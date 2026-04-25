@@ -9,7 +9,7 @@ private:
 	usize _len;
 
 public:
-	StaticArray<T, N>() : _data{}, _len{0} {}
+	constexpr StaticArray() : _data{}, _len{0} {}
 
 	T& operator[](usize idx){
 		ensure(idx < _len, "index out of bounds");

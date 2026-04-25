@@ -11,8 +11,8 @@ private:
 	Allocator _allocator;
 
 public:
-	DynArray<T>() : _data{nullptr}, _len{0}, _cap{0}, _allocator{} {}
-	explicit DynArray<T>(Allocator a) : _data{nullptr}, _len{0}, _cap{0}, _allocator{a} {}
+	DynArray() : _data{nullptr}, _len{0}, _cap{0}, _allocator{} {}
+	explicit DynArray(Allocator a) : _data{nullptr}, _len{0}, _cap{0}, _allocator{a} {}
 
 	T& operator[](usize idx){
 		ensure(idx < _len, "index out of bounds");

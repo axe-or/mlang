@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
 
 
-cc='clang++'
+cc='g++'
 cflags='-std=c++20 -fno-strict-aliasing -fno-exceptions -fno-rtti -nodefaultlibs'
 
 incflags='-I.'
@@ -17,9 +17,9 @@ mode="${1:?Usage: build.sh [debug|release|test] <options...>}"
 shift
 
 case $mode in
-	"debug")   optflags='-O0 -g' ;;
+	"debug")   optflags='-O0 -g';;
 	"release") optflags='-O2' ;;
-	"test")    optflags='-Os -g' ;;
+	"test")    optflags='-Os -g';;
 	*) echo "Unknown mode: $mode"; exit 1 ;;
 esac
 
@@ -29,7 +29,7 @@ use_static=0
 for arg in "$@"; do
 	case $arg in
 		"-no-mimalloc") use_mimalloc=0 ;;
-		"-static")      use_static=1 ;;
+		"-static") use_static=1 ;;
 		*) echo "Unknown option: $arg"; exit 1 ;;
 	esac
 done
